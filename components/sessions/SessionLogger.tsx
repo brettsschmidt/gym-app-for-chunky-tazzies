@@ -1,12 +1,14 @@
 "use client";
 
-import { useTransition } from "react";
-import { Check, Plus, Trash2 } from "lucide-react";
+import { Fragment, useState, useTransition } from "react";
+import { Check, ChevronDown, Flame, Plus, Repeat, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   addExerciseToSessionAction,
   deleteSetAction,
   finishSessionAction,
+  insertWarmupAction,
+  repeatLastSetAction,
   upsertSetAction,
 } from "@/lib/actions/sessions";
 import { Button } from "@/components/ui/button";
@@ -20,21 +22,28 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { RestTimer } from "@/components/sessions/RestTimer";
+import { PlateCalculator } from "@/components/sessions/PlateCalculator";
 import { totalTonnage, workingSetCount } from "@/lib/volume";
+import type { SetKind } from "@/lib/schemas/sessions";
 
 export interface SessionExerciseShape {
   id: string;
   exercise_id: string;
   exercise_name: string;
   position: number;
+  rest_seconds?: number | null;
   sets: Array<{
     id: string;
     set_number: number;
     reps: number | null;
     weight_kg: number | null;
     rpe: number | null;
+    rir: number | null;
     is_warmup: boolean;
     is_completed: boolean;
+    failed_at_set: boolean;
+    set_kind: SetKind;
+    notes: string | null;
   }>;
 }
 
@@ -53,6 +62,7 @@ export function SessionLogger({
 }) {
   const [isPending, startTransition] = useTransition();
   const sessionPath = `/sessions/${sessionId}`;
+  const [expandedSet, setExpandedSet] = useState<string | null>(null);
 
   const allSets = exercises.flatMap((e) => e.sets);
   const totalKg = totalTonnage(allSets);
@@ -71,11 +81,21 @@ export function SessionLogger({
     if (merged.reps != null) fd.set("reps", String(merged.reps));
     if (merged.weight_kg != null) fd.set("weight_kg", String(merged.weight_kg));
     if (merged.rpe != null) fd.set("rpe", String(merged.rpe));
+    if (merged.rir != null) fd.set("rir", String(merged.rir));
     fd.set("is_warmup", merged.is_warmup ? "true" : "false");
     fd.set("is_completed", merged.is_completed ? "true" : "false");
+    fd.set("failed_at_set", merged.failed_at_set ? "true" : "false");
+    fd.set("set_kind", merged.set_kind);
+    if (merged.notes) fd.set("notes", merged.notes);
     fd.set("session_path", sessionPath);
     startTransition(async () => {
-      await upsertSetAction(fd);
+      const result = await upsertSetAction(fd);
+      if (result?.prHit && result.prValue != null) {
+        toast.success(
+          `New PR! ${result.exerciseName ?? ""} e1RM ${result.prValue.toFixed(1)} kg`,
+          { icon: "🏆" },
+        );
+      }
     });
   }
 
@@ -90,6 +110,35 @@ export function SessionLogger({
     });
   }
 
+  function repeatLastSet(sessionExerciseId: string) {
+    const fd = new FormData();
+    fd.set("session_exercise_id", sessionExerciseId);
+    fd.set("session_path", sessionPath);
+    startTransition(async () => {
+      await repeatLastSetAction(fd);
+    });
+  }
+
+  function insertWarmup(
+    sessionExerciseId: string,
+    workingWeightKg: number,
+    workingReps: number,
+  ) {
+    if (!workingWeightKg || workingWeightKg < 30) {
+      toast.info("Warmup ramp only suggested for working sets ≥ 30 kg");
+      return;
+    }
+    const fd = new FormData();
+    fd.set("session_exercise_id", sessionExerciseId);
+    fd.set("working_weight_kg", String(workingWeightKg));
+    fd.set("working_reps", String(workingReps || 8));
+    fd.set("session_path", sessionPath);
+    startTransition(async () => {
+      await insertWarmupAction(fd);
+      toast.success("Warmup ramp added");
+    });
+  }
+
   return (
     <div className="space-y-4">
       <div className="bg-card flex items-center justify-between rounded-md border p-3 text-sm">
@@ -100,124 +149,252 @@ export function SessionLogger({
         {!isFinished && isOwner && <RestTimer />}
       </div>
 
-      {exercises.map((ex) => (
-        <Card key={ex.id}>
-          <CardHeader>
-            <CardTitle className="text-base">
-              {ex.position + 1}. {ex.exercise_name}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <table className="w-full text-sm">
-              <thead className="text-muted-foreground text-xs uppercase">
-                <tr>
-                  <th className="w-10 text-left">#</th>
-                  <th className="text-left">Reps</th>
-                  <th className="text-left">Weight</th>
-                  <th className="text-left">RPE</th>
-                  <th className="w-12">W</th>
-                  <th className="w-12">✓</th>
-                  <th className="w-8"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {ex.sets.map((s) => (
-                  <tr key={s.id} className="border-t">
-                    <td className="text-muted-foreground py-1.5">{s.set_number}</td>
-                    <td>
-                      <SetNumberInput
-                        value={s.reps}
-                        disabled={!isOwner || isFinished}
-                        onCommit={(v) => persistSet(s, ex.id, { reps: v })}
-                      />
-                    </td>
-                    <td>
-                      <SetNumberInput
-                        value={s.weight_kg}
-                        step={0.5}
-                        disabled={!isOwner || isFinished}
-                        onCommit={(v) => persistSet(s, ex.id, { weight_kg: v })}
-                      />
-                    </td>
-                    <td>
-                      <SetNumberInput
-                        value={s.rpe}
-                        step={0.5}
-                        max={10}
-                        disabled={!isOwner || isFinished}
-                        onCommit={(v) => persistSet(s, ex.id, { rpe: v })}
-                      />
-                    </td>
-                    <td className="text-center">
-                      <input
-                        type="checkbox"
-                        checked={s.is_warmup}
-                        disabled={!isOwner || isFinished}
-                        onChange={(e) =>
-                          persistSet(s, ex.id, { is_warmup: e.target.checked })
-                        }
-                      />
-                    </td>
-                    <td className="text-center">
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant={s.is_completed ? "default" : "outline"}
-                        disabled={!isOwner || isFinished}
-                        onClick={() =>
-                          persistSet(s, ex.id, { is_completed: !s.is_completed })
-                        }
-                      >
-                        <Check className="size-4" />
-                      </Button>
-                    </td>
-                    <td className="text-right">
-                      {isOwner && !isFinished && (
-                        <form
-                          action={async (fd) => {
-                            fd.set("id", s.id);
-                            fd.set("session_path", sessionPath);
-                            await deleteSetAction(fd);
-                          }}
-                        >
-                          <button
-                            type="submit"
-                            className="text-muted-foreground hover:text-destructive"
-                            aria-label="Delete set"
-                          >
-                            <Trash2 className="size-4" />
-                          </button>
-                        </form>
-                      )}
-                    </td>
+      {exercises.map((ex) => {
+        const firstWorking = ex.sets.find(
+          (s) => !s.is_warmup && s.weight_kg != null && s.weight_kg > 0,
+        );
+        return (
+          <Card key={ex.id}>
+            <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
+              <CardTitle className="text-base">
+                {ex.position + 1}. {ex.exercise_name}
+              </CardTitle>
+              {isOwner && !isFinished && (
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      insertWarmup(
+                        ex.id,
+                        firstWorking?.weight_kg ?? 0,
+                        firstWorking?.reps ?? 8,
+                      )
+                    }
+                  >
+                    <Flame className="size-3.5" /> Warmup
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => repeatLastSet(ex.id)}
+                  >
+                    <Repeat className="size-3.5" /> Repeat last
+                  </Button>
+                </div>
+              )}
+            </CardHeader>
+            <CardContent>
+              <table className="w-full text-sm">
+                <thead className="text-muted-foreground text-xs uppercase">
+                  <tr>
+                    <th className="w-10 text-left">#</th>
+                    <th className="text-left">Reps</th>
+                    <th className="text-left">Weight</th>
+                    <th className="text-left">RPE</th>
+                    <th className="text-left">RIR</th>
+                    <th className="w-12">W</th>
+                    <th className="w-12">✓</th>
+                    <th className="w-8"></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            {isOwner && !isFinished && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-2"
-                disabled={isPending}
-                onClick={() => {
-                  const next = (ex.sets[ex.sets.length - 1]?.set_number ?? 0) + 1;
-                  const fd = new FormData();
-                  fd.set("session_exercise_id", ex.id);
-                  fd.set("set_number", String(next));
-                  fd.set("session_path", sessionPath);
-                  startTransition(async () => {
-                    await upsertSetAction(fd);
-                  });
-                }}
-              >
-                <Plus className="size-4" /> Add set
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      ))}
+                </thead>
+                <tbody>
+                  {ex.sets.map((s) => {
+                    const isExpanded = expandedSet === s.id;
+                    return (
+                      <Fragment key={s.id}>
+                        <tr className="border-t">
+                          <td className="text-muted-foreground py-1.5">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedSet(isExpanded ? null : s.id)
+                              }
+                              className="hover:text-foreground inline-flex items-center gap-1"
+                            >
+                              {s.set_number}
+                              <ChevronDown
+                                className={`size-3 transition ${
+                                  isExpanded ? "rotate-180" : ""
+                                }`}
+                              />
+                            </button>
+                          </td>
+                          <td>
+                            <SetNumberInput
+                              value={s.reps}
+                              disabled={!isOwner || isFinished}
+                              onCommit={(v) => persistSet(s, ex.id, { reps: v })}
+                            />
+                          </td>
+                          <td>
+                            <div className="flex items-center gap-0.5">
+                              <SetNumberInput
+                                value={s.weight_kg}
+                                step={0.5}
+                                disabled={!isOwner || isFinished}
+                                onCommit={(v) =>
+                                  persistSet(s, ex.id, { weight_kg: v })
+                                }
+                              />
+                              <PlateCalculator initialKg={s.weight_kg} />
+                            </div>
+                          </td>
+                          <td>
+                            <SetNumberInput
+                              value={s.rpe}
+                              step={0.5}
+                              max={10}
+                              disabled={!isOwner || isFinished}
+                              onCommit={(v) => persistSet(s, ex.id, { rpe: v })}
+                            />
+                          </td>
+                          <td>
+                            <SetNumberInput
+                              value={s.rir}
+                              max={10}
+                              disabled={!isOwner || isFinished}
+                              onCommit={(v) => persistSet(s, ex.id, { rir: v })}
+                            />
+                          </td>
+                          <td className="text-center">
+                            <input
+                              type="checkbox"
+                              checked={s.is_warmup}
+                              disabled={!isOwner || isFinished}
+                              onChange={(e) =>
+                                persistSet(s, ex.id, {
+                                  is_warmup: e.target.checked,
+                                  set_kind: e.target.checked
+                                    ? "warmup"
+                                    : "working",
+                                })
+                              }
+                            />
+                          </td>
+                          <td className="text-center">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant={s.is_completed ? "default" : "outline"}
+                              disabled={!isOwner || isFinished}
+                              onClick={() =>
+                                persistSet(s, ex.id, {
+                                  is_completed: !s.is_completed,
+                                })
+                              }
+                            >
+                              <Check className="size-4" />
+                            </Button>
+                          </td>
+                          <td className="text-right">
+                            {isOwner && !isFinished && (
+                              <form
+                                action={async (fd) => {
+                                  fd.set("id", s.id);
+                                  fd.set("session_path", sessionPath);
+                                  await deleteSetAction(fd);
+                                }}
+                              >
+                                <button
+                                  type="submit"
+                                  className="text-muted-foreground hover:text-destructive"
+                                  aria-label="Delete set"
+                                >
+                                  <Trash2 className="size-4" />
+                                </button>
+                              </form>
+                            )}
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr className="bg-muted/30 border-t">
+                            <td></td>
+                            <td colSpan={7} className="py-2">
+                              <div className="flex flex-wrap items-center gap-3 text-xs">
+                                <label className="inline-flex items-center gap-1">
+                                  <input
+                                    type="checkbox"
+                                    checked={s.failed_at_set}
+                                    disabled={!isOwner || isFinished}
+                                    onChange={(e) =>
+                                      persistSet(s, ex.id, {
+                                        failed_at_set: e.target.checked,
+                                      })
+                                    }
+                                  />
+                                  Failed
+                                </label>
+                                <label className="inline-flex items-center gap-1">
+                                  Kind:
+                                  <select
+                                    value={s.set_kind}
+                                    disabled={!isOwner || isFinished}
+                                    onChange={(e) =>
+                                      persistSet(s, ex.id, {
+                                        set_kind: e.target.value as SetKind,
+                                      })
+                                    }
+                                    className="border-input bg-background h-7 rounded border px-1"
+                                  >
+                                    <option value="working">working</option>
+                                    <option value="warmup">warmup</option>
+                                    <option value="drop">drop</option>
+                                    <option value="cluster">cluster</option>
+                                    <option value="rest_pause">rest-pause</option>
+                                    <option value="amrap">AMRAP</option>
+                                  </select>
+                                </label>
+                                <input
+                                  type="text"
+                                  defaultValue={s.notes ?? ""}
+                                  placeholder="Set notes…"
+                                  disabled={!isOwner || isFinished}
+                                  onBlur={(e) =>
+                                    persistSet(s, ex.id, {
+                                      notes: e.target.value || null,
+                                    })
+                                  }
+                                  className="border-input bg-background h-7 flex-1 rounded border px-2"
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {isOwner && !isFinished && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  disabled={isPending}
+                  onClick={() => {
+                    const next =
+                      (ex.sets[ex.sets.length - 1]?.set_number ?? 0) + 1;
+                    const fd = new FormData();
+                    fd.set("session_exercise_id", ex.id);
+                    fd.set("set_number", String(next));
+                    fd.set("set_kind", "working");
+                    fd.set("session_path", sessionPath);
+                    startTransition(async () => {
+                      await upsertSetAction(fd);
+                    });
+                  }}
+                >
+                  <Plus className="size-4" /> Add set
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
 
       {isOwner && !isFinished && exerciseOptions.length > 0 && (
         <Card>
@@ -238,7 +415,9 @@ export function SessionLogger({
               <Button
                 type="button"
                 onClick={() => {
-                  const sel = document.getElementById("add-ex") as HTMLSelectElement;
+                  const sel = document.getElementById(
+                    "add-ex",
+                  ) as HTMLSelectElement;
                   if (sel) addExercise(sel.value);
                 }}
               >

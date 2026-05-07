@@ -7,6 +7,7 @@ import { listExercises } from "@/lib/queries/exercises";
 import { TemplateBuilder } from "@/components/workouts/TemplateBuilder";
 import { Button } from "@/components/ui/button";
 import { deleteTemplateAction } from "@/lib/actions/workouts";
+import { copyLastSessionAction } from "@/lib/actions/sessions";
 import type { TemplateExerciseLine } from "@/lib/schemas/workouts";
 
 export default async function TemplateDetailPage({
@@ -50,6 +51,13 @@ export default async function TemplateDetailPage({
           <Button asChild>
             <Link href={`/sessions/new?template=${id}`}>Start session</Link>
           </Button>
+          <form action={copyLastSessionAction}>
+            <input type="hidden" name="workout_template_id" value={id} />
+            <input type="hidden" name="chunky_tazzle_id" value={tazzleId} />
+            <Button type="submit" variant="outline">
+              Repeat last
+            </Button>
+          </form>
           <form action={deleteTemplateAction}>
             <input type="hidden" name="id" value={id} />
             <Button type="submit" variant="ghost" className="text-destructive">

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { listMyShares } from "@/lib/queries/share";
 import { revokeShareLinkAction } from "@/lib/actions/share";
 import { deleteAccountAction } from "@/lib/actions/auth";
@@ -9,14 +10,46 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { buildShareUrl } from "@/lib/share";
+import { UserPrefsForm } from "@/components/settings/UserPrefsForm";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function SettingsPage() {
   const shares = await listMyShares();
   const active = shares.filter((s) => !s.revoked_at);
 
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  let prefs: Record<string, unknown> | null = null;
+  if (user) {
+    const { data } = await supabase
+      .from("user_prefs")
+      .select("*")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    prefs = data ?? null;
+  }
+
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-4 md:p-6">
       <h1 className="text-2xl font-semibold">Settings</h1>
+
+      <UserPrefsForm prefs={prefs} />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Import &amp; export</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <Button asChild variant="outline">
+            <Link href="/import">Import from Strong CSV</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <a href="/api/export">Export all my data (JSON)</a>
+          </Button>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

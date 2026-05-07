@@ -10,6 +10,7 @@ export function RestTimer({ defaultSeconds = 90 }: { defaultSeconds?: number }) 
   const [target, setTarget] = useState(defaultSeconds);
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
+  const finishedRef = useRef(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -23,6 +24,36 @@ export function RestTimer({ defaultSeconds = 90 }: { defaultSeconds?: number }) 
   }, [running]);
 
   const remaining = Math.max(0, target - elapsed);
+
+  // Beep + vibrate when timer hits zero (once per cycle).
+  useEffect(() => {
+    if (running && remaining === 0 && !finishedRef.current) {
+      finishedRef.current = true;
+      try {
+        if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+          navigator.vibrate?.([200, 80, 200]);
+        }
+        const ctx = new (window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext })
+            .webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = 880;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.5);
+      } catch {
+        /* audio unavailable */
+      }
+      setRunning(false);
+    }
+    if (remaining > 0) finishedRef.current = false;
+  }, [remaining, running]);
+
   const mm = Math.floor(remaining / 60).toString().padStart(2, "0");
   const ss = (remaining % 60).toString().padStart(2, "0");
 
@@ -41,6 +72,7 @@ export function RestTimer({ defaultSeconds = 90 }: { defaultSeconds?: number }) 
             onClick={() => {
               setTarget(p);
               setElapsed(0);
+              finishedRef.current = false;
             }}
           >
             {p}s
@@ -63,6 +95,7 @@ export function RestTimer({ defaultSeconds = 90 }: { defaultSeconds?: number }) 
         onClick={() => {
           setElapsed(0);
           setRunning(false);
+          finishedRef.current = false;
         }}
         aria-label="Reset"
       >

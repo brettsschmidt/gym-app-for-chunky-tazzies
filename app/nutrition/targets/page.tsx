@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getTargets } from "@/lib/queries/nutrition";
 import { setTargetsAction } from "@/lib/actions/nutrition";
 import { Button } from "@/components/ui/button";
@@ -8,10 +9,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export default async function TargetsPage() {
   const t = await getTargets();
   return (
-    <div className="mx-auto max-w-md p-4 md:p-6">
+    <div className="mx-auto max-w-md space-y-4 p-4 md:p-6">
       <Card>
         <CardHeader>
-          <CardTitle>Daily macro targets</CardTitle>
+          <CardTitle className="flex items-center justify-between">
+            <span>Daily macro targets</span>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/nutrition/targets/calculator">Calculator</Link>
+            </Button>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form action={setTargetsAction} className="space-y-3">

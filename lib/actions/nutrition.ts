@@ -219,6 +219,163 @@ export async function deleteRecipeAction(formData: FormData) {
   redirect("/nutrition/recipes");
 }
 
+export async function toggleFavoriteFoodAction(formData: FormData) {
+  const foodId = formData.get("food_id");
+  const action = formData.get("action");
+  if (typeof foodId !== "string") return;
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  if (action === "remove") {
+    await supabase
+      .from("favorite_foods")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("food_id", foodId);
+  } else {
+    await supabase
+      .from("favorite_foods")
+      .upsert({ user_id: user.id, food_id: foodId });
+  }
+  revalidatePath("/nutrition");
+  revalidatePath("/nutrition/foods");
+}
+
+export async function copyMealsFromYesterdayAction(formData: FormData) {
+  const tazzleId = formData.get("chunky_tazzle_id");
+  if (typeof tazzleId !== "string") return;
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - 1);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+
+  const { data: prevMeals } = await supabase
+    .from("nutrition_meals")
+    .select("id, meal_type, notes, nutrition_meal_items(food_id, quantity_g, position)")
+    .eq("user_id", user.id)
+    .gte("eaten_at", start.toISOString())
+    .lt("eaten_at", end.toISOString());
+
+  for (const m of prevMeals ?? []) {
+    const { data: created } = await supabase
+      .from("nutrition_meals")
+      .insert({
+        user_id: user.id,
+        chunky_tazzle_id: tazzleId,
+        meal_type: m.meal_type as string,
+        notes: (m.notes as string | null) ?? null,
+      })
+      .select("id")
+      .single();
+    if (!created?.id) continue;
+    const items = (m.nutrition_meal_items as unknown as Array<{
+      food_id: string;
+      quantity_g: number;
+      position: number;
+    }>) ?? [];
+    if (items.length) {
+      await supabase.from("nutrition_meal_items").insert(
+        items.map((i) => ({
+          meal_id: created.id as string,
+          food_id: i.food_id,
+          quantity_g: i.quantity_g,
+          position: i.position,
+        })),
+      );
+    }
+  }
+  revalidatePath("/nutrition");
+}
+
+export async function setHydrationTargetAction(formData: FormData) {
+  const ml = Number(formData.get("hydration_ml") ?? 0);
+  if (!ml || ml < 100) return;
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("user_prefs").upsert({
+    user_id: user.id,
+    hydration_target_ml: ml,
+  } as Record<string, unknown>);
+  revalidatePath("/nutrition");
+}
+
+export async function logSupplementAction(formData: FormData) {
+  const name = (formData.get("name") as string) ?? "";
+  if (!name.trim()) return;
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("supplement_logs").insert({
+    user_id: user.id,
+    name: name.trim(),
+    dose: (formData.get("dose") as string) || null,
+    time_of_day: (formData.get("time_of_day") as string) || null,
+  });
+  revalidatePath("/nutrition");
+}
+
+export async function logCaffeineAction(formData: FormData) {
+  const amount = Number(formData.get("amount_mg") ?? 0);
+  if (!amount || amount <= 0) return;
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("caffeine_logs").insert({
+    user_id: user.id,
+    amount_mg: amount,
+    source: (formData.get("source") as string) || null,
+  });
+  revalidatePath("/nutrition");
+}
+
+export async function logAlcoholAction(formData: FormData) {
+  const units = Number(formData.get("units") ?? 0);
+  if (!units || units <= 0) return;
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("alcohol_logs").insert({
+    user_id: user.id,
+    units,
+    kind: (formData.get("kind") as string) || null,
+    kcal: Number(formData.get("kcal") ?? 0) || null,
+  });
+  revalidatePath("/nutrition");
+}
+
+export async function addFoodUnitAction(formData: FormData) {
+  const food_id = formData.get("food_id");
+  const label = formData.get("label");
+  const grams = Number(formData.get("grams") ?? 0);
+  if (typeof food_id !== "string" || typeof label !== "string" || grams <= 0)
+    return;
+  const supabase = await createSupabaseServerClient();
+  await supabase.from("nutrition_food_units").insert({
+    food_id,
+    label: label.trim(),
+    grams,
+  });
+  revalidatePath(`/nutrition/foods/${food_id}`);
+}
+
 export async function logRecipeAsMealAction(formData: FormData) {
   const parsed = logRecipeAsMealSchema.safeParse({
     recipe_id: formData.get("recipe_id"),

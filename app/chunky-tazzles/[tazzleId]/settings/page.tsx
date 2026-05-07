@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTazzle } from "@/lib/queries/chunky-tazzles";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function TazzleSettingsPage({
@@ -17,6 +19,21 @@ export default async function TazzleSettingsPage({
         <h1 className="text-2xl font-semibold">{tazzle.name as string}</h1>
         <p className="text-muted-foreground text-sm">Settings</p>
       </header>
+      <div className="flex flex-wrap gap-2">
+        <Button asChild variant="outline">
+          <Link href={`/chunky-tazzles/${tazzleId}/members`}>Members</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href={`/chunky-tazzles/${tazzleId}/leaderboard`}>
+            Leaderboard
+          </Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href={`/chunky-tazzles/${tazzleId}/challenges`}>
+            Challenges
+          </Link>
+        </Button>
+      </div>
       <Card>
         <CardHeader>
           <CardTitle>Details</CardTitle>

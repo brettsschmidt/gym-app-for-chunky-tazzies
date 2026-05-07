@@ -138,3 +138,86 @@ export async function getRecentTazzleMeals(tazzleId: string, limit = 30) {
     .limit(limit);
   return data ?? [];
 }
+
+export async function getWeeklyAverages(days = 7) {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - (days - 1));
+
+  const { data: meals } = await supabase
+    .from("nutrition_meals")
+    .select(
+      "eaten_at, nutrition_meal_items(quantity_g,nutrition_foods(serving_size_g,kcal,protein_g,carbs_g,fat_g,fiber_g))",
+    )
+    .eq("user_id", user.id)
+    .gte("eaten_at", start.toISOString());
+
+  const dailyTotals = new Map<
+    string,
+    { kcal: number; protein: number; carbs: number; fat: number; fiber: number }
+  >();
+  for (const m of meals ?? []) {
+    const day = new Date(m.eaten_at as string).toISOString().slice(0, 10);
+    const cur = dailyTotals.get(day) ?? {
+      kcal: 0,
+      protein: 0,
+      carbs: 0,
+      fat: 0,
+      fiber: 0,
+    };
+    const items = (m.nutrition_meal_items as unknown as Array<{
+      quantity_g: number;
+      nutrition_foods: {
+        serving_size_g: number;
+        kcal: number;
+        protein_g: number;
+        carbs_g: number;
+        fat_g: number;
+        fiber_g: number | null;
+      } | null;
+    }>) ?? [];
+    for (const it of items) {
+      const f = it.nutrition_foods;
+      if (!f || !f.serving_size_g || f.serving_size_g <= 0) continue;
+      const r = it.quantity_g / f.serving_size_g;
+      cur.kcal += f.kcal * r;
+      cur.protein += f.protein_g * r;
+      cur.carbs += f.carbs_g * r;
+      cur.fat += f.fat_g * r;
+      cur.fiber += (f.fiber_g ?? 0) * r;
+    }
+    dailyTotals.set(day, cur);
+  }
+
+  const series = [...dailyTotals.entries()]
+    .map(([day, t]) => ({ day, ...t }))
+    .sort((a, b) => a.day.localeCompare(b.day));
+  const n = series.length || 1;
+  const sum = series.reduce(
+    (a, c) => ({
+      kcal: a.kcal + c.kcal,
+      protein: a.protein + c.protein,
+      carbs: a.carbs + c.carbs,
+      fat: a.fat + c.fat,
+      fiber: a.fiber + c.fiber,
+    }),
+    { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
+  );
+  return {
+    series,
+    averages: {
+      kcal: sum.kcal / n,
+      protein: sum.protein / n,
+      carbs: sum.carbs / n,
+      fat: sum.fat / n,
+      fiber: sum.fiber / n,
+    },
+    days: series.length,
+  };
+}

@@ -65,8 +65,26 @@ export interface Database {
       share_links: PassThroughTable;
       push_subscriptions: PassThroughTable;
       activity_log: PassThroughTable;
+      user_prefs: PassThroughTable;
+      favorite_foods: PassThroughTable;
+      nutrition_food_units: PassThroughTable;
+      cardio_sessions: PassThroughTable;
+      mobility_logs: PassThroughTable;
+      notifications: PassThroughTable;
+      chunky_tazzle_equipment: PassThroughTable;
+      caffeine_logs: PassThroughTable;
+      alcohol_logs: PassThroughTable;
+      supplement_logs: PassThroughTable;
+      progress_photos: PassThroughTable;
+      sleep_logs: PassThroughTable;
+      daily_wellness: PassThroughTable;
+      reactions: PassThroughTable;
+      comments: PassThroughTable;
+      tazzle_challenges: PassThroughTable;
+      tazzle_challenge_progress: PassThroughTable;
+      strength_standards: PassThroughTable;
     };
-    Views: Record<string, never>;
+    Views: { weekly_muscle_volume: { Row: Row; Relationships: [] } };
     Functions: {
       redeem_invite: { Args: { code: string }; Returns: string };
       is_chunky_tazzle_member: {
@@ -82,6 +100,16 @@ export interface Database {
         Returns: void;
       };
       resolve_share_link: { Args: { slug: string }; Returns: Json };
+      tazzle_leaderboard: {
+        Args: { tazzle: string; since?: string };
+        Returns: Json;
+      };
+      workout_streak: { Args: { uid: string }; Returns: number };
+      refresh_weekly_muscle_volume: { Args: Record<string, never>; Returns: void };
+      user_can_see_subject: {
+        Args: { subject_kind: string; subject_id: string; uid: string };
+        Returns: boolean;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

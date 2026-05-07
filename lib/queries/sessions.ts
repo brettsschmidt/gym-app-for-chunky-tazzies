@@ -39,7 +39,7 @@ export async function getSession(id: string) {
     const { data: sets } = await supabase
       .from("session_sets")
       .select(
-        "id, session_exercise_id, set_number, reps, weight_kg, rpe, is_warmup, is_completed, rest_seconds_actual",
+        "id, session_exercise_id, set_number, reps, weight_kg, rpe, rir, is_warmup, is_completed, failed_at_set, set_kind, notes, rest_seconds_actual",
       )
       .in("session_exercise_id", exerciseIds)
       .order("set_number");

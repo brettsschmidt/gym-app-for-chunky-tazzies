@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getActiveTazzleId } from "@/lib/active-tazzle";
-import { getRecentTazzleMeals } from "@/lib/queries/nutrition";
+import { getRecentTazzleMeals, getWeeklyAverages } from "@/lib/queries/nutrition";
 import { lookupDisplayNames } from "@/lib/queries/sessions";
 import { macrosForQuantity, sumMacros } from "@/lib/nutrition";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,10 @@ import { RealtimeRefresher } from "@/components/realtime-refresher";
 export default async function NutritionHistoryPage() {
   const tazzleId = await getActiveTazzleId();
   if (!tazzleId) redirect("/dashboard");
-  const meals = await getRecentTazzleMeals(tazzleId, 50);
+  const [meals, weekly] = await Promise.all([
+    getRecentTazzleMeals(tazzleId, 50),
+    getWeeklyAverages(7),
+  ]);
   const userIds = Array.from(new Set(meals.map((m) => m.user_id as string)));
   const names = await lookupDisplayNames(userIds);
 
@@ -17,6 +20,49 @@ export default async function NutritionHistoryPage() {
     <div className="mx-auto max-w-3xl space-y-4 p-4 md:p-6">
       <RealtimeRefresher tazzleId={tazzleId} channels={["meals"]} />
       <h1 className="text-2xl font-semibold">Tazzle nutrition feed</h1>
+      {weekly && weekly.days > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              Your 7-day averages ({weekly.days} day{weekly.days === 1 ? "" : "s"} logged)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-5">
+              <li>
+                <p className="text-muted-foreground text-xs">kcal/day</p>
+                <p className="text-lg font-semibold">
+                  {weekly.averages.kcal.toFixed(0)}
+                </p>
+              </li>
+              <li>
+                <p className="text-muted-foreground text-xs">protein</p>
+                <p className="text-lg font-semibold">
+                  {weekly.averages.protein.toFixed(0)} g
+                </p>
+              </li>
+              <li>
+                <p className="text-muted-foreground text-xs">carbs</p>
+                <p className="text-lg font-semibold">
+                  {weekly.averages.carbs.toFixed(0)} g
+                </p>
+              </li>
+              <li>
+                <p className="text-muted-foreground text-xs">fat</p>
+                <p className="text-lg font-semibold">
+                  {weekly.averages.fat.toFixed(0)} g
+                </p>
+              </li>
+              <li>
+                <p className="text-muted-foreground text-xs">fiber</p>
+                <p className="text-lg font-semibold">
+                  {weekly.averages.fiber.toFixed(0)} g
+                </p>
+              </li>
+            </ul>
+          </CardContent>
+        </Card>
+      )}
       <Card>
         <CardHeader>
           <CardTitle>Recent meals</CardTitle>
