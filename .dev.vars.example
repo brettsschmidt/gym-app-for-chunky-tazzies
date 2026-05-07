@@ -1,0 +1,5 @@
+# Cloudflare Workers local dev secrets (used by `npm run preview`)
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...
+VAPID_PRIVATE_KEY=
+VAPID_SUBJECT=mailto:you@example.com
+CRON_SECRET=

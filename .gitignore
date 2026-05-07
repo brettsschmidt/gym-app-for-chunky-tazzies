@@ -34,3 +34,20 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# cloudflare / opennext
+.open-next
+.wrangler
+.dev.vars
+cloudflare-env.d.ts
+
+# playwright
+/playwright-report
+/test-results
+/.auth
+
+# generated assets
+/public/sw.js
+/public/sw.js.map
+/public/swe-worker-*.js
+/public/icons/generated
