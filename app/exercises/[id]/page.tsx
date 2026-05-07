@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getExercise } from "@/lib/queries/exercises";
+import { getExerciseHistory } from "@/lib/queries/prs";
 import { deleteExerciseAction } from "@/lib/actions/exercises";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ExerciseHistoryChart } from "@/components/metrics/ExerciseHistoryChart";
+import { evaluateStall } from "@/lib/progression-insights";
+import { epley1RM } from "@/lib/volume";
 
 export default async function ExerciseDetailPage({
   params,
@@ -30,6 +34,20 @@ export default async function ExerciseDetailPage({
 
   const mg = exercise.muscle_groups as unknown as { name: string } | null;
   const eq = exercise.equipment as unknown as { name: string } | null;
+
+  const history = await getExerciseHistory(id);
+  const historyPoints = (history as Array<Record<string, unknown>>)
+    .filter((r) => r.weight_kg != null && r.reps != null)
+    .map((r) => ({
+      date: r.created_at as string,
+      weight_kg: r.weight_kg as number,
+      reps: r.reps as number,
+    }));
+  const e1rmSeries = historyPoints
+    .slice()
+    .reverse()
+    .map((p) => epley1RM(p.weight_kg, p.reps));
+  const stall = evaluateStall(e1rmSeries);
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-4 md:p-6">
@@ -81,6 +99,26 @@ export default async function ExerciseDetailPage({
               </form>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {stall.isStalled && (
+        <div className="bg-amber-500/10 text-amber-900 dark:text-amber-200 rounded-md border border-amber-500/40 p-3 text-sm">
+          Looks like progression has stalled here for {stall.windowSessions}{" "}
+          sessions. Consider a deload week, swapping in a variation, or pushing
+          intensity (drop a rep target, raise weight by 1.25 kg).
+        </div>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Your history</CardTitle>
+          <CardDescription>
+            Estimated 1RM across {historyPoints.length} working sets.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ExerciseHistoryChart data={historyPoints} />
         </CardContent>
       </Card>
     </div>

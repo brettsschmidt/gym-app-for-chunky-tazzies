@@ -3,10 +3,17 @@ import { redirect } from "next/navigation";
 import { Plus } from "lucide-react";
 import { getActiveTazzleId } from "@/lib/active-tazzle";
 import { getRecentSessions, lookupDisplayNames } from "@/lib/queries/sessions";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RealtimeRefresher } from "@/components/realtime-refresher";
+import { CalendarHeatmap } from "@/components/sessions/CalendarHeatmap";
 
 export default async function SessionsPage() {
   const tazzleId = await getActiveTazzleId();
@@ -14,6 +21,32 @@ export default async function SessionsPage() {
   const sessions = await getRecentSessions(tazzleId, 30);
   const userIds = Array.from(new Set(sessions.map((s) => s.user_id as string)));
   const names = await lookupDisplayNames(userIds);
+
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  let myDayCounts: Array<{ date: string; count: number }> = [];
+  if (user) {
+    const sinceISO = new Date(
+      Date.now() - 365 * 24 * 60 * 60 * 1000,
+    ).toISOString();
+    const { data: yearRows } = await supabase
+      .from("workout_sessions")
+      .select("started_at")
+      .eq("user_id", user.id)
+      .not("completed_at", "is", null)
+      .gte("started_at", sinceISO);
+    const counts = new Map<string, number>();
+    for (const r of yearRows ?? []) {
+      const d = new Date(r.started_at as string).toISOString().slice(0, 10);
+      counts.set(d, (counts.get(d) ?? 0) + 1);
+    }
+    myDayCounts = [...counts.entries()].map(([date, count]) => ({
+      date,
+      count,
+    }));
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4 md:p-6">
@@ -26,6 +59,15 @@ export default async function SessionsPage() {
           </Link>
         </Button>
       </header>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Your year</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CalendarHeatmap data={myDayCounts} />
+        </CardContent>
+      </Card>
 
       {sessions.length === 0 ? (
         <Card>

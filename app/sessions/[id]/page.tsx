@@ -3,16 +3,20 @@ import { redirect } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getSession } from "@/lib/queries/sessions";
+import { getSession, lookupDisplayNames } from "@/lib/queries/sessions";
 import { listExercises } from "@/lib/queries/exercises";
 import { getActiveTazzleId } from "@/lib/active-tazzle";
 import { deleteSessionAction } from "@/lib/actions/sessions";
+import { getComments, getReactions } from "@/lib/queries/social";
 import {
   SessionLogger,
   type SessionExerciseShape,
 } from "@/components/sessions/SessionLogger";
 import { RealtimeRefresher } from "@/components/realtime-refresher";
+import { Reactions } from "@/components/social/Reactions";
+import { Comments } from "@/components/social/Comments";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function SessionDetailPage({
   params,
@@ -52,8 +56,18 @@ export default async function SessionDetailPage({
         reps: (s.reps as number | null) ?? null,
         weight_kg: (s.weight_kg as number | null) ?? null,
         rpe: (s.rpe as number | null) ?? null,
+        rir: (s.rir as number | null) ?? null,
         is_warmup: !!s.is_warmup,
         is_completed: !!s.is_completed,
+        failed_at_set: !!s.failed_at_set,
+        set_kind: ((s.set_kind as string | null) ?? "working") as
+          | "working"
+          | "warmup"
+          | "drop"
+          | "cluster"
+          | "rest_pause"
+          | "amrap",
+        notes: (s.notes as string | null) ?? null,
       }),
     ),
   }));
@@ -105,6 +119,52 @@ export default async function SessionDetailPage({
         exercises={shapedExercises}
         exerciseOptions={exerciseOptions}
       />
+
+      {isFinished && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Tazzle reactions</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Reactions
+              subjectKind="workout_session"
+              subjectId={id}
+              reactions={(await getReactions("workout_session", id)).map(
+                (r) => ({
+                  id: r.id as string,
+                  kind: r.kind as string,
+                  user_id: r.user_id as string,
+                }),
+              )}
+              myUserId={user?.id ?? null}
+              path={`/sessions/${id}`}
+            />
+            <Comments
+              subjectKind="workout_session"
+              subjectId={id}
+              comments={(await getComments("workout_session", id)).map((c) => ({
+                id: c.id as string,
+                user_id: c.user_id as string,
+                parent_id: (c.parent_id as string | null) ?? null,
+                body: c.body as string,
+                created_at: c.created_at as string,
+              }))}
+              myUserId={user?.id ?? null}
+              displayNames={Object.fromEntries(
+                await (async () => {
+                  const cs = await getComments("workout_session", id);
+                  const ids = Array.from(
+                    new Set(cs.map((c) => c.user_id as string)),
+                  );
+                  const map = await lookupDisplayNames(ids);
+                  return Array.from(map.entries());
+                })(),
+              )}
+              path={`/sessions/${id}`}
+            />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

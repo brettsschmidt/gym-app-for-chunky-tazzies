@@ -8,6 +8,10 @@ import { getActiveTazzleId, setActiveTazzleId } from "@/lib/active-tazzle";
 import { BottomNav, SideNav } from "@/components/nav/BottomNav";
 import { TazzleSwitcher } from "@/components/nav/TazzleSwitcher";
 import { UserMenu } from "@/components/nav/UserMenu";
+import {
+  CommandPalette,
+  type CommandItem,
+} from "@/components/search/CommandPalette";
 
 export default async function DashboardLayout({
   children,
@@ -36,6 +40,40 @@ export default async function DashboardLayout({
     .eq("id", user.id)
     .maybeSingle();
 
+  // Pre-fetch a small list of items for Cmd+K. Cheap because catalog tends to
+  // be small per tazzle, and the palette filters in-memory.
+  const paletteItems: CommandItem[] = [];
+  if (activeId) {
+    const { data: exs } = await supabase
+      .from("exercises")
+      .select("id, name")
+      .or(`chunky_tazzle_id.is.null,chunky_tazzle_id.eq.${activeId}`)
+      .order("name")
+      .limit(150);
+    for (const e of exs ?? []) {
+      paletteItems.push({
+        id: `ex-${e.id}`,
+        label: e.name as string,
+        href: `/exercises/${e.id}`,
+        category: "exercise",
+      });
+    }
+    const { data: foods } = await supabase
+      .from("nutrition_foods")
+      .select("id, name")
+      .or(`chunky_tazzle_id.is.null,chunky_tazzle_id.eq.${activeId}`)
+      .order("name")
+      .limit(150);
+    for (const f of foods ?? []) {
+      paletteItems.push({
+        id: `food-${f.id}`,
+        label: f.name as string,
+        href: `/nutrition/foods/${f.id}`,
+        category: "food",
+      });
+    }
+  }
+
   return (
     <div className="bg-background flex min-h-svh flex-col">
       <header className="bg-card safe-top sticky top-0 z-30 flex items-center justify-between gap-3 border-b px-4 py-2">
@@ -58,6 +96,7 @@ export default async function DashboardLayout({
       </div>
 
       <BottomNav />
+      <CommandPalette items={paletteItems} />
     </div>
   );
 }

@@ -38,10 +38,25 @@ export default async function DashboardPage() {
     .order("updated_at", { ascending: false })
     .limit(3);
 
+  let streak = 0;
+  if (user) {
+    const { data: streakRow } = await supabase.rpc("workout_streak", {
+      uid: user.id,
+    });
+    streak = (streakRow as number | null) ?? 0;
+  }
+
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-4 md:p-6">
       <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Hey there 💪</h1>
+        <div>
+          <h1 className="text-2xl font-semibold">Hey there 💪</h1>
+          {streak > 0 && (
+            <p className="text-muted-foreground text-sm">
+              🔥 {streak}-day workout streak
+            </p>
+          )}
+        </div>
         <Button asChild>
           <Link href="/sessions/new">Start a session</Link>
         </Button>

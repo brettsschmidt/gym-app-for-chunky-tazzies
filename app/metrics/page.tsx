@@ -18,11 +18,19 @@ export default async function MetricsPage() {
     <div className="mx-auto max-w-3xl space-y-4 p-4 md:p-6">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Metrics &amp; PRs</h1>
-        <Button asChild>
-          <Link href="/metrics/new">
-            <Plus className="size-4" /> Log
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/metrics/standards">Standards</Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/metrics/volume">Volume</Link>
+          </Button>
+          <Button asChild>
+            <Link href="/metrics/new">
+              <Plus className="size-4" /> Log
+            </Link>
+          </Button>
+        </div>
       </header>
 
       <Card>
