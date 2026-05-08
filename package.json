@@ -6,9 +6,9 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "next dev --webpack",
+    "dev": "next dev --webpack -p 3001",
     "build": "next build --webpack",
-    "start": "next start",
+    "start": "next start -p 3001",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",

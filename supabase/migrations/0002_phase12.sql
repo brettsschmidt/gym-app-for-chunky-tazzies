@@ -279,7 +279,7 @@ exception when duplicate_object then null; end $$;
 -- =============================================================================
 create table if not exists gym.chunky_tazzle_equipment (
   chunky_tazzle_id uuid not null references gym.chunky_tazzles(id) on delete cascade,
-  equipment_id integer not null references gym.equipment(id) on delete cascade,
+  equipment_id uuid not null references gym.equipment(id) on delete cascade,
   primary key (chunky_tazzle_id, equipment_id)
 );
 

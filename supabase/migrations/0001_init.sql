@@ -69,7 +69,9 @@ exception when duplicate_object then null; end $$;
 -- TIMESTAMP HELPER
 -- =============================================================================
 create or replace function gym.touch_updated_at()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql
+set search_path = gym
+as $$
 begin
   new.updated_at = now();
   return new;
@@ -431,7 +433,9 @@ end;
 $$;
 
 create or replace function gym.session_sets_pr_trigger()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql
+set search_path = gym
+as $$
 begin
   perform gym.update_personal_records(new.id);
   return new;

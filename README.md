@@ -24,7 +24,7 @@ nvm use            # Node 22
 npm install
 cp .env.example .env.local   # fill in Supabase + VAPID keys
 npm run icons:gen            # generate PWA icons
-npm run dev                  # http://localhost:3000
+npm run dev                  # http://localhost:3001
 ```
 
 ### Supabase

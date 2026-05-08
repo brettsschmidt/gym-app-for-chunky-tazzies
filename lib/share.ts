@@ -8,6 +8,6 @@ export function newSlug(): string {
 
 export function buildShareUrl(slug: string): string {
   const base =
-    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "http://localhost:3000";
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "http://localhost:3001";
   return `${base}/share/${slug}`;
 }
