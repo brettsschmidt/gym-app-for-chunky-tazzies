@@ -14,6 +14,7 @@ import {
 import { buildWarmupRamp } from "@/lib/warmup";
 import { epley1RM } from "@/lib/volume";
 import { flashMascot } from "@/lib/mascot/flash";
+import { displayToKg, type Units } from "@/lib/units";
 
 export async function startSessionAction(formData: FormData) {
   const parsed = startSessionSchema.safeParse({
@@ -91,9 +92,18 @@ export async function startSessionAction(formData: FormData) {
 }
 
 export async function finishSessionAction(formData: FormData) {
+  // Bodyweight comes from the form in the user's display units; convert to kg
+  // (the canonical storage unit) before validation.
+  const rawBodyweight = formData.get("bodyweight_display") ?? formData.get("bodyweight_kg");
+  const bodyweightUnits = (formData.get("bodyweight_units") as Units | null) ?? "metric";
+  const bodyweightKg =
+    typeof rawBodyweight === "string" && rawBodyweight.length > 0
+      ? displayToKg(Number(rawBodyweight), bodyweightUnits)
+      : undefined;
+
   const parsed = finishSessionSchema.safeParse({
     id: formData.get("id"),
-    bodyweight_kg: formData.get("bodyweight_kg") || undefined,
+    bodyweight_kg: bodyweightKg,
     perceived_effort: formData.get("perceived_effort") || undefined,
     notes: formData.get("notes") || undefined,
   });

@@ -45,3 +45,34 @@ export function formatDistance(meters: number | null | undefined, units: Units):
   if (meters >= 1000) return `${(meters / 1000).toFixed(2)} km`;
   return `${meters.toFixed(0)} m`;
 }
+
+// --- editable-input helpers (canonical kg in DB, display in user units) ---
+
+/** kg → display value (lbs for imperial, kg for metric). Pass-through for null. */
+export function kgToDisplay(
+  kg: number | null | undefined,
+  units: Units,
+): number | null {
+  if (kg == null) return null;
+  return units === "imperial" ? kgToLb(kg) : kg;
+}
+
+/** display value → kg for storage. */
+export function displayToKg(value: number, units: Units): number {
+  return units === "imperial" ? lbToKg(value) : value;
+}
+
+export function unitLabel(units: Units): "lbs" | "kg" {
+  return units === "imperial" ? "lbs" : "kg";
+}
+
+/** Round to 1 decimal for display. */
+export function roundDisplay(value: number | null): number | null {
+  if (value == null) return null;
+  return Math.round(value * 10) / 10;
+}
+
+/** Default step for weight inputs in display units (5 lbs ≈ 2.5 kg). */
+export function defaultWeightStep(units: Units): number {
+  return units === "imperial" ? 5 : 2.5;
+}

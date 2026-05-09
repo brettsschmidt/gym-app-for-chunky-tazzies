@@ -14,7 +14,7 @@ export function UserPrefsForm({
   prefs: Record<string, unknown> | null;
 }) {
   const [units, setUnits] = useState<string>(
-    (prefs?.units as string) ?? "metric",
+    (prefs?.units as string) ?? "imperial",
   );
   const [theme, setTheme] = useState<string>((prefs?.theme as string) ?? "auto");
   const [isPending, startTransition] = useTransition();

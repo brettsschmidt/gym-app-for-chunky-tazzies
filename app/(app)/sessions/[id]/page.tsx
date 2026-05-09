@@ -6,6 +6,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSession, lookupDisplayNames } from "@/lib/queries/sessions";
 import { listExercises } from "@/lib/queries/exercises";
 import { getActiveTazzleId } from "@/lib/active-tazzle";
+import { getUserUnits } from "@/lib/queries/units";
 import { deleteSessionAction } from "@/lib/actions/sessions";
 import { getComments, getReactions } from "@/lib/queries/social";
 import {
@@ -118,6 +119,7 @@ export default async function SessionDetailPage({
         isFinished={isFinished}
         exercises={shapedExercises}
         exerciseOptions={exerciseOptions}
+        units={await getUserUnits()}
       />
 
       {isFinished && (

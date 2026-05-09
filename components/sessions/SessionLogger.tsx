@@ -26,6 +26,14 @@ import { RestTimer } from "@/components/sessions/RestTimer";
 import { PlateCalculator } from "@/components/sessions/PlateCalculator";
 import { totalTonnage, workingSetCount } from "@/lib/volume";
 import type { SetKind } from "@/lib/schemas/sessions";
+import {
+  type Units,
+  defaultWeightStep,
+  displayToKg,
+  kgToDisplay,
+  roundDisplay,
+  unitLabel,
+} from "@/lib/units";
 
 export interface SessionExerciseShape {
   id: string;
@@ -54,13 +62,17 @@ export function SessionLogger({
   isFinished,
   exercises,
   exerciseOptions,
+  units,
 }: {
   sessionId: string;
   isOwner: boolean;
   isFinished: boolean;
   exercises: SessionExerciseShape[];
   exerciseOptions: Array<{ id: string; name: string }>;
+  units: Units;
 }) {
+  const wLabel = unitLabel(units);
+  const wStep = defaultWeightStep(units);
   const [isPending, startTransition] = useTransition();
   const sessionPath = `/sessions/${sessionId}`;
   const [expandedSet, setExpandedSet] = useState<string | null>(null);
@@ -92,9 +104,10 @@ export function SessionLogger({
     startTransition(async () => {
       const result = await upsertSetAction(fd);
       if (result?.prHit && result.prValue != null) {
+        const prDisplay = roundDisplay(kgToDisplay(result.prValue, units))!;
         showMascot(
           "pr",
-          `🏆 PR! ${result.exerciseName ?? "Lift"} · ${result.prValue.toFixed(1)} kg e1RM`,
+          `🏆 PR! ${result.exerciseName ?? "Lift"} · ${prDisplay} ${wLabel} e1RM`,
         );
       } else if (
         merged.is_completed &&
@@ -154,7 +167,8 @@ export function SessionLogger({
       <div className="bg-card flex items-center justify-between rounded-md border p-3 text-sm">
         <span>
           <strong>{completedSets}</strong> working sets ·{" "}
-          <strong>{totalKg.toFixed(0)}</strong> kg moved
+          <strong>{(kgToDisplay(totalKg, units) ?? 0).toFixed(0)}</strong>{" "}
+          {wLabel} moved
         </span>
         {!isFinished && isOwner && <RestTimer />}
       </div>
@@ -242,11 +256,16 @@ export function SessionLogger({
                           <td>
                             <div className="flex items-center gap-0.5">
                               <SetNumberInput
-                                value={s.weight_kg}
-                                step={0.5}
+                                value={roundDisplay(
+                                  kgToDisplay(s.weight_kg, units),
+                                )}
+                                step={wStep}
                                 disabled={!isOwner || isFinished}
                                 onCommit={(v) =>
-                                  persistSet(s, ex.id, { weight_kg: v })
+                                  persistSet(s, ex.id, {
+                                    weight_kg:
+                                      v != null ? displayToKg(v, units) : null,
+                                  })
                                 }
                               />
                               <PlateCalculator initialKg={s.weight_kg} />
@@ -448,13 +467,16 @@ export function SessionLogger({
             <CardContent className="space-y-3">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="bodyweight_kg">Bodyweight (kg)</Label>
+                  <Label htmlFor="bodyweight_display">
+                    Bodyweight ({wLabel})
+                  </Label>
                   <Input
-                    id="bodyweight_kg"
-                    name="bodyweight_kg"
+                    id="bodyweight_display"
+                    name="bodyweight_display"
                     type="number"
                     step={0.1}
                   />
+                  <input type="hidden" name="bodyweight_units" value={units} />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="perceived_effort">Perceived effort (1–10)</Label>
