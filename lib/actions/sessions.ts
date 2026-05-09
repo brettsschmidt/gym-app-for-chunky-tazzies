@@ -13,6 +13,7 @@ import {
 } from "@/lib/schemas/sessions";
 import { buildWarmupRamp } from "@/lib/warmup";
 import { epley1RM } from "@/lib/volume";
+import { flashMascot } from "@/lib/mascot/flash";
 
 export async function startSessionAction(formData: FormData) {
   const parsed = startSessionSchema.safeParse({
@@ -109,6 +110,7 @@ export async function finishSessionAction(formData: FormData) {
     })
     .eq("id", parsed.data.id);
 
+  await flashMascot("session_done");
   revalidatePath(`/sessions/${parsed.data.id}`);
   revalidatePath("/sessions");
   redirect(`/sessions/${parsed.data.id}`);

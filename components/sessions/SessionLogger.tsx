@@ -3,6 +3,7 @@
 import { Fragment, useState, useTransition } from "react";
 import { Check, ChevronDown, Flame, Plus, Repeat, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { showMascot } from "@/components/mascot/MascotToast";
 import {
   addExerciseToSessionAction,
   deleteSetAction,
@@ -91,10 +92,19 @@ export function SessionLogger({
     startTransition(async () => {
       const result = await upsertSetAction(fd);
       if (result?.prHit && result.prValue != null) {
-        toast.success(
-          `New PR! ${result.exerciseName ?? ""} e1RM ${result.prValue.toFixed(1)} kg`,
-          { icon: "🏆" },
+        showMascot(
+          "pr",
+          `🏆 PR! ${result.exerciseName ?? "Lift"} · ${result.prValue.toFixed(1)} kg e1RM`,
         );
+      } else if (
+        merged.is_completed &&
+        !merged.is_warmup &&
+        (merged.weight_kg ?? 0) > 0 &&
+        Math.random() < 0.25
+      ) {
+        // Show a casual mascot on roughly 1-in-4 working sets so it's a
+        // delight instead of a distraction.
+        showMascot("set");
       }
     });
   }

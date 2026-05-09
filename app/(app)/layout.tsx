@@ -13,6 +13,7 @@ import {
   type CommandItem,
 } from "@/components/search/CommandPalette";
 import { HotDogFab } from "@/components/hot-dogs/HotDogFab";
+import { MascotListener } from "@/components/mascot/MascotListener";
 
 export default async function DashboardLayout({
   children,
@@ -104,6 +105,7 @@ export default async function DashboardLayout({
 
       <BottomNav />
       <HotDogFab />
+      <MascotListener />
       <CommandPalette items={paletteItems} />
     </div>
   );

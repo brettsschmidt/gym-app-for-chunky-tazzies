@@ -1,66 +1,63 @@
 /**
- * Generate the brand mark + PWA icons from a simple inline dumbbell SVG.
+ * Generate the brand mark + PWA icons from the cat-base mascot sprite.
  * Run with: npm run icons:gen
  *
+ * Source: public/branding/mascot/cat-base.png (the south-facing rotation of the
+ * Tazzie Cow-Cat character generated via the pixellab MCP).
+ *
  * Writes:
- *   public/branding/logo-transparent.png  — transparent-bg dumbbell, used in
- *                                            the landing hero, header, and
- *                                            welcome dialog
+ *   public/branding/logo-transparent.png  — pass-through copy used in the
+ *                                            landing hero, header, and welcome
+ *                                            dialog
  *   public/icons/icon-{192,512,1024}.png  — PWA icons on cream
  *   public/icons/icon-maskable-512.png    — maskable icon on cocoa
  */
-import { mkdir, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import sharp from "sharp";
 
+const SRC = resolve(process.cwd(), "public/branding/mascot/cat-base.png");
+const TRANSPARENT_OUT = resolve(
+  process.cwd(),
+  "public/branding/logo-transparent.png",
+);
+
 const ICON_BG = "#f8f1de"; // milk — matches manifest background_color
 const MASKABLE_BG = "#231a13"; // cocoa — matches manifest theme_color
-const DUMBBELL_COLOR = "#231a13"; // cocoa primary
-
-const dumbbellSvg = (color: string) =>
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-    <g fill="${color}">
-      <rect x="120" y="430" width="120" height="164" rx="40"/>
-      <rect x="784" y="430" width="120" height="164" rx="40"/>
-      <rect x="240" y="468" width="80" height="88" rx="24"/>
-      <rect x="704" y="468" width="80" height="88" rx="24"/>
-      <rect x="320" y="488" width="384" height="48" rx="20"/>
-    </g>
-  </svg>`;
 
 const sizes = [
-  { name: "icon-192.png", size: 192, bg: ICON_BG, padding: 0.12, fg: DUMBBELL_COLOR },
-  { name: "icon-512.png", size: 512, bg: ICON_BG, padding: 0.12, fg: DUMBBELL_COLOR },
-  { name: "icon-1024.png", size: 1024, bg: ICON_BG, padding: 0.12, fg: DUMBBELL_COLOR },
-  { name: "icon-maskable-512.png", size: 512, bg: MASKABLE_BG, padding: 0.22, fg: ICON_BG },
+  { name: "icon-192.png", size: 192, bg: ICON_BG, padding: 0.12 },
+  { name: "icon-512.png", size: 512, bg: ICON_BG, padding: 0.12 },
+  { name: "icon-1024.png", size: 1024, bg: ICON_BG, padding: 0.12 },
+  { name: "icon-maskable-512.png", size: 512, bg: MASKABLE_BG, padding: 0.22 },
 ];
 
 async function main() {
-  // Standalone transparent-bg logo for inline UI use.
-  const standalone = await sharp(Buffer.from(dumbbellSvg(DUMBBELL_COLOR)))
-    .resize(1024, 1024)
-    .png()
-    .toBuffer();
-  const standaloneOut = resolve(
-    process.cwd(),
-    "public/branding/logo-transparent.png",
-  );
-  await writeFile(standaloneOut, standalone);
-  console.log(`wrote ${standaloneOut}`);
+  // Standalone logo for inline UI use — pass-through copy, alpha already clean
+  // because the pixel-art sprite was rendered with transparency.
+  await copyFile(SRC, TRANSPARENT_OUT);
+  console.log(`wrote ${TRANSPARENT_OUT}`);
 
-  // PWA icons.
+  // Pixel-art is tiny (64×92ish). Trim transparent border so the cat fills the
+  // icon, then nearest-neighbor upscale to keep pixels crisp at icon sizes.
+  const trimmed = await sharp(SRC).trim().toBuffer();
+
   const outDir = resolve(process.cwd(), "public/icons");
   await mkdir(outDir, { recursive: true });
-  for (const { name, size, bg, padding, fg } of sizes) {
+
+  for (const { name, size, bg, padding } of sizes) {
     const inner = Math.round(size * (1 - padding * 2));
-    const dumbbell = await sharp(Buffer.from(dumbbellSvg(fg)))
-      .resize(inner, inner)
-      .png()
+    const cat = await sharp(trimmed)
+      .resize(inner, inner, {
+        fit: "contain",
+        kernel: "nearest", // keep pixel-art crisp on upscale
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      })
       .toBuffer();
     const composed = await sharp({
       create: { width: size, height: size, channels: 4, background: bg },
     })
-      .composite([{ input: dumbbell, gravity: "center" }])
+      .composite([{ input: cat, gravity: "center" }])
       .png()
       .toBuffer();
     await writeFile(resolve(outDir, name), composed);

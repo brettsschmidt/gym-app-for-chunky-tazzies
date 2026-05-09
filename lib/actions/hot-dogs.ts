@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getActiveTazzleId } from "@/lib/active-tazzle";
+import { flashMascot } from "@/lib/mascot/flash";
 
 const logSchema = z.object({
   count: z.coerce.number().int().min(1).max(100).default(1),
@@ -41,6 +42,7 @@ export async function logHotDogAction(formData: FormData) {
     return { ok: false as const, error: "insert_failed" };
   }
 
+  await flashMascot("hotdog");
   revalidatePath("/hotdogs");
   revalidatePath("/dashboard");
   return { ok: true as const, count: parsed.data.count };
