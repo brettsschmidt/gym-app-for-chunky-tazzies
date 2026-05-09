@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
-import { Dumbbell } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabasePublicServerClient } from "@/lib/supabase/public-client";
 import { listMyTazzles } from "@/lib/queries/chunky-tazzles";
@@ -12,6 +12,7 @@ import {
   CommandPalette,
   type CommandItem,
 } from "@/components/search/CommandPalette";
+import { HotDogFab } from "@/components/hot-dogs/HotDogFab";
 
 export default async function DashboardLayout({
   children,
@@ -78,7 +79,13 @@ export default async function DashboardLayout({
     <div className="bg-background flex min-h-svh flex-col">
       <header className="bg-card safe-top sticky top-0 z-30 flex items-center justify-between gap-3 border-b px-4 py-2">
         <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-          <Dumbbell className="text-primary size-5" />
+          <Image
+            src="/branding/logo-transparent.png"
+            alt="Chunky Tazzies"
+            width={32}
+            height={32}
+            className="size-8"
+          />
           <span className="hidden sm:inline">Chunky Tazzies</span>
         </Link>
         <div className="flex items-center gap-2">
@@ -96,6 +103,7 @@ export default async function DashboardLayout({
       </div>
 
       <BottomNav />
+      <HotDogFab />
       <CommandPalette items={paletteItems} />
     </div>
   );

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { listMyTazzles } from "@/lib/queries/chunky-tazzles";
+import { WelcomeDialog } from "@/components/onboarding/WelcomeDialog";
 
 export default async function DashboardPage() {
   const tazzles = await listMyTazzles();
@@ -48,6 +49,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-4 md:p-6">
+      <WelcomeDialog />
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Hey there 💪</h1>
@@ -157,6 +159,7 @@ function QuickAction({
 function EmptyTazzles() {
   return (
     <div className="mx-auto max-w-md space-y-4 p-8 text-center">
+      <WelcomeDialog />
       <h1 className="text-2xl font-semibold">Welcome 👋</h1>
       <p className="text-muted-foreground">
         Create your first chunky tazzle (your gym-buddy crew) to start logging

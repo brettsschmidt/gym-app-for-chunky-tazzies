@@ -9,16 +9,26 @@ export async function getActiveTazzleId(): Promise<string | null> {
 }
 
 export async function setActiveTazzleId(id: string) {
-  const c = await cookies();
-  c.set(COOKIE, id, {
-    path: "/",
-    maxAge: ONE_YEAR,
-    sameSite: "lax",
-    httpOnly: false,
-  });
+  try {
+    const c = await cookies();
+    c.set(COOKIE, id, {
+      path: "/",
+      maxAge: ONE_YEAR,
+      sameSite: "lax",
+      httpOnly: false,
+    });
+  } catch {
+    // Server Components can't mutate cookies in Next 16. Layouts may call this
+    // to lazily seed the active tazzle on first load — swallow the error and
+    // let the cookie be written next time a server action or route handler runs.
+  }
 }
 
 export async function clearActiveTazzleId() {
-  const c = await cookies();
-  c.delete(COOKIE);
+  try {
+    const c = await cookies();
+    c.delete(COOKIE);
+  } catch {
+    // see note in setActiveTazzleId
+  }
 }

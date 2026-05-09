@@ -22,7 +22,10 @@ const items = [
 export function BottomNav() {
   const pathname = usePathname();
   return (
-    <nav className="bg-card safe-bottom fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t md:hidden">
+    <nav
+      aria-label="Primary"
+      className="bg-card safe-bottom fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t md:hidden"
+    >
       {items.map(({ href, icon: Icon, label }) => {
         const active = pathname === href || pathname.startsWith(href + "/");
         return (

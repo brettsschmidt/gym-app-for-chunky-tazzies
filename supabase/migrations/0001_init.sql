@@ -16,29 +16,10 @@ create extension if not exists "pgcrypto";
 create schema if not exists gym;
 
 -- -----------------------------------------------------------------------------
--- Profiles bridge: if Baby-food's signup trigger hasn't yet created a row
--- for a brand-new user, we still want a usable handle. We never alter the
--- table here — just guarantee rows exist via a small trigger.
+-- Profiles bridge: Baby-food's `on_auth_user_created` trigger already inserts
+-- a row into public.profiles for every new auth.users row, so we don't add
+-- our own trigger here (doing so caused duplicate-key conflicts during signup).
 -- -----------------------------------------------------------------------------
-create or replace function gym.ensure_profile()
-returns trigger
-language plpgsql
-security definer
-set search_path = public, gym
-as $$
-begin
-  insert into public.profiles (id)
-  values (new.id)
-  on conflict (id) do nothing;
-  return new;
-end;
-$$;
-
-drop trigger if exists gym_ensure_profile on auth.users;
-create trigger gym_ensure_profile
-  after insert on auth.users
-  for each row
-  execute function gym.ensure_profile();
 
 -- =============================================================================
 -- ENUMS
@@ -844,9 +825,12 @@ alter table gym.push_subscriptions enable row level security;
 alter table gym.activity_log enable row level security;
 
 -- chunky_tazzles
-create policy "tazzles select for members"
+create policy "tazzles select for members or owner"
   on gym.chunky_tazzles for select
-  using (gym.is_chunky_tazzle_member(id, auth.uid()));
+  using (
+    owner_id = auth.uid()
+    or gym.is_chunky_tazzle_member(id, auth.uid())
+  );
 create policy "tazzles insert by self as owner"
   on gym.chunky_tazzles for insert
   with check (owner_id = auth.uid());

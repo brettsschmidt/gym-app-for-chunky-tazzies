@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Dumbbell, Salad, Users } from "lucide-react";
@@ -16,6 +17,14 @@ export default async function LandingPage() {
 
   return (
     <main className="safe-top safe-bottom mx-auto flex min-h-svh max-w-3xl flex-col items-center justify-center gap-10 px-6 py-16 text-center">
+      <Image
+        src="/branding/logo-transparent.png"
+        alt="Chunky Tazzies"
+        width={360}
+        height={360}
+        priority
+        className="h-auto w-48 sm:w-64"
+      />
       <div className="space-y-4">
         <div className="bg-primary/10 text-primary inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium">
           <Dumbbell className="size-4" />

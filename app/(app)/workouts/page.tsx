@@ -15,11 +15,16 @@ export default async function WorkoutsPage() {
     <div className="mx-auto max-w-3xl space-y-4 p-4 md:p-6">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Workout templates</h1>
-        <Button asChild>
-          <Link href="/workouts/new">
-            <Plus className="size-4" /> New
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href="/workouts/schedule">Schedule</Link>
+          </Button>
+          <Button asChild>
+            <Link href="/workouts/new">
+              <Plus className="size-4" /> New
+            </Link>
+          </Button>
+        </div>
       </header>
 
       {templates.length === 0 ? (

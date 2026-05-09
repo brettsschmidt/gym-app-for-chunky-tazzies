@@ -21,7 +21,10 @@ export function UserMenu({
   const initials = (displayName || email || "?").slice(0, 2).toUpperCase();
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="bg-primary text-primary-foreground flex size-9 items-center justify-center rounded-full text-sm font-semibold">
+      <DropdownMenuTrigger
+        aria-label="User menu"
+        className="bg-primary text-primary-foreground flex size-9 items-center justify-center rounded-full text-sm font-semibold"
+      >
         {initials}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
@@ -42,7 +45,7 @@ export function UserMenu({
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <form action={signOutAction}>
-          <DropdownMenuItem asChild>
+          <DropdownMenuItem asChild onSelect={(e) => e.preventDefault()}>
             <button type="submit" className="w-full">
               <LogOut className="size-4" /> Sign out
             </button>

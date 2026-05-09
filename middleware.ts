@@ -38,6 +38,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api/foods/lookup") ||
     pathname.startsWith("/manifest.json") ||
     pathname.startsWith("/icons/") ||
+    pathname.startsWith("/branding/") ||
     pathname.startsWith("/.well-known/") ||
     pathname === "/sw.js";
 
