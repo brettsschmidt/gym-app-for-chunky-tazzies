@@ -19,9 +19,11 @@ export const progressionRuleSchema = z.discriminatedUnion("kind", [
 ]);
 export type ProgressionRule = z.infer<typeof progressionRuleSchema>;
 
-export const templateExerciseLineSchema = z.object({
-  exercise_id: z.string().uuid(),
-  position: z.number().int().min(0),
+export const templateExerciseLineSchema = z
+  .object({
+    exercise_id: z.string().uuid().optional(),
+    exercise_name: z.string().trim().min(1).max(120).optional(),
+    position: z.number().int().min(0),
   target_sets: z.number().int().min(1).max(20).optional(),
   target_reps_min: z.number().int().min(1).max(100).optional(),
   target_reps_max: z.number().int().min(1).max(100).optional(),
@@ -29,8 +31,12 @@ export const templateExerciseLineSchema = z.object({
   target_rpe: z.number().min(0).max(10).optional(),
   rest_seconds: z.number().int().min(0).max(900).optional(),
   superset_group: z.number().int().min(0).max(20).optional(),
-  progression_rule: progressionRuleSchema.default({ kind: "none" }),
-});
+    progression_rule: progressionRuleSchema.default({ kind: "none" }),
+  })
+  .refine((d) => d.exercise_id || d.exercise_name, {
+    message: "Pick an exercise or type a new one",
+    path: ["exercise_name"],
+  });
 export type TemplateExerciseLine = z.infer<typeof templateExerciseLineSchema>;
 
 export const createTemplateSchema = z.object({

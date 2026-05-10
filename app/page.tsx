@@ -16,7 +16,7 @@ export default async function LandingPage() {
   }
 
   return (
-    <main className="safe-top safe-bottom mx-auto flex min-h-svh max-w-3xl flex-col items-center justify-center gap-10 px-6 py-16 text-center">
+    <main className="safe-top safe-bottom mx-auto flex min-h-svh max-w-3xl flex-col items-center justify-center gap-10 px-6 pt-16 pb-24 text-center">
       <Image
         src="/branding/logo-transparent.png"
         alt="Chunky Tazzies"

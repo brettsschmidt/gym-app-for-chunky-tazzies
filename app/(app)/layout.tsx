@@ -14,6 +14,8 @@ import {
 } from "@/components/search/CommandPalette";
 import { HotDogFab } from "@/components/hot-dogs/HotDogFab";
 import { MascotListener } from "@/components/mascot/MascotListener";
+import { GoblinNudge } from "@/components/goblin/GoblinNudge";
+import { isBrad } from "@/lib/goblin/detect";
 
 export default async function DashboardLayout({
   children,
@@ -100,12 +102,18 @@ export default async function DashboardLayout({
 
       <div className="flex flex-1">
         <SideNav />
-        <main className="flex-1 pb-20 md:pb-6">{children}</main>
+        <main className="flex-1 pb-36 md:pb-6">{children}</main>
       </div>
 
       <BottomNav />
       <HotDogFab />
       <MascotListener />
+      <GoblinNudge
+        active={isBrad({
+          displayName: (profile?.display_name as string) ?? null,
+          email: user.email ?? null,
+        })}
+      />
       <CommandPalette items={paletteItems} />
     </div>
   );

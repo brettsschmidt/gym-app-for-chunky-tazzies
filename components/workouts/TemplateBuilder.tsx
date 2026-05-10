@@ -21,6 +21,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  type Units,
+  defaultWeightStep,
+  displayToKg,
+  kgToDisplay,
+  roundDisplay,
+  unitLabel,
+} from "@/lib/units";
 
 type ExerciseOption = { id: string; name: string };
 
@@ -34,6 +42,7 @@ export interface TemplateBuilderProps {
     lines: TemplateExerciseLine[];
   };
   exercises: ExerciseOption[];
+  units?: Units;
 }
 
 const blankRule: ProgressionRule = { kind: "none" };
@@ -44,6 +53,7 @@ export function TemplateBuilder({
   templateId,
   initial,
   exercises,
+  units = "imperial",
 }: TemplateBuilderProps) {
   const [name, setName] = useState(initial?.name ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
@@ -56,14 +66,11 @@ export function TemplateBuilder({
   }
 
   function addLine() {
-    if (!exercises.length) {
-      toast.error("Add an exercise first.");
-      return;
-    }
     setLines((current) => [
       ...current,
       {
-        exercise_id: exercises[0].id,
+        exercise_id: exercises[0]?.id,
+        exercise_name: exercises[0]?.name,
         position: current.length,
         target_sets: 3,
         target_reps_min: 8,
@@ -159,6 +166,7 @@ export function TemplateBuilder({
               onMoveUp={() => move(idx, -1)}
               onMoveDown={() => move(idx, 1)}
               exercises={exercises}
+              units={units}
             />
           ))}
         </CardContent>
@@ -181,6 +189,7 @@ function LineEditor({
   onRemove,
   onMoveUp,
   onMoveDown,
+  units,
 }: {
   idx: number;
   line: TemplateExerciseLine;
@@ -189,43 +198,89 @@ function LineEditor({
   onRemove: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
+  units: Units;
 }) {
+  const wLabel = unitLabel(units);
+  const wStep = defaultWeightStep(units);
+  const datalistId = `ex-options-${idx}`;
   return (
-    <div className="rounded-lg border p-3">
-      <div className="flex items-center gap-2">
-        <span className="text-muted-foreground w-6 text-xs">#{idx + 1}</span>
-        <select
-          value={line.exercise_id}
-          onChange={(e) => onChange({ exercise_id: e.target.value })}
-          className="border-input bg-background h-9 flex-1 rounded-md border px-2 text-sm"
-        >
+    <div className="overflow-hidden rounded-lg border p-3">
+      <div className="flex items-center gap-1.5">
+        <span className="text-muted-foreground w-5 shrink-0 text-xs">
+          #{idx + 1}
+        </span>
+        <Input
+          list={datalistId}
+          value={line.exercise_name ?? ""}
+          onChange={(e) => {
+            const name = e.target.value;
+            const match = exercises.find(
+              (ex) => ex.name.toLowerCase() === name.toLowerCase(),
+            );
+            onChange({
+              exercise_name: name,
+              exercise_id: match?.id,
+            });
+          }}
+          placeholder="Type or pick an exercise…"
+          className="min-w-0 flex-1"
+        />
+        <datalist id={datalistId}>
           {exercises.map((ex) => (
-            <option key={ex.id} value={ex.id}>
-              {ex.name}
-            </option>
+            <option key={ex.id} value={ex.name} />
           ))}
-        </select>
-        <Button type="button" variant="ghost" size="icon" onClick={onMoveUp}>
-          <ChevronUp className="size-4" />
-        </Button>
-        <Button type="button" variant="ghost" size="icon" onClick={onMoveDown}>
-          <ChevronDown className="size-4" />
-        </Button>
+        </datalist>
         <Button
           type="button"
           variant="ghost"
           size="icon"
           onClick={onRemove}
-          className="text-destructive"
+          className="text-destructive shrink-0"
         >
           <Trash2 className="size-4" />
         </Button>
       </div>
-      <div className="mt-2 grid gap-2 sm:grid-cols-6">
+      {line.exercise_name && !line.exercise_id && (
+        <p className="text-muted-foreground mt-1 text-xs">
+          new exercise — &ldquo;{line.exercise_name}&rdquo; will be saved to your tazzle
+        </p>
+      )}
+      <div className="mt-2 flex justify-end gap-1">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onMoveUp}
+          aria-label="move up"
+        >
+          <ChevronUp className="size-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onMoveDown}
+          aria-label="move down"
+        >
+          <ChevronDown className="size-4" />
+        </Button>
+      </div>
+      <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
         <NumField label="Sets" value={line.target_sets} onChange={(v) => onChange({ target_sets: v })} min={1} max={20} />
         <NumField label="Reps min" value={line.target_reps_min} onChange={(v) => onChange({ target_reps_min: v })} min={1} max={100} />
         <NumField label="Reps max" value={line.target_reps_max} onChange={(v) => onChange({ target_reps_max: v })} min={1} max={100} />
-        <NumField label="Weight kg" value={line.target_weight_kg} onChange={(v) => onChange({ target_weight_kg: v })} min={0} max={2000} step={0.5} />
+        <NumField
+          label={`Weight ${wLabel}`}
+          value={roundDisplay(kgToDisplay(line.target_weight_kg ?? null, units)) ?? undefined}
+          onChange={(v) =>
+            onChange({
+              target_weight_kg: v == null ? undefined : displayToKg(v, units),
+            })
+          }
+          min={0}
+          max={units === "imperial" ? 4400 : 2000}
+          step={wStep}
+        />
         <NumField label="RPE" value={line.target_rpe} onChange={(v) => onChange({ target_rpe: v })} min={0} max={10} step={0.5} />
         <NumField label="Rest s" value={line.rest_seconds} onChange={(v) => onChange({ rest_seconds: v })} min={0} max={900} step={5} />
       </div>
@@ -269,7 +324,7 @@ function NumField({
   step?: number;
 }) {
   return (
-    <div className="space-y-1">
+    <div className="min-w-0 space-y-1">
       <Label className="text-xs">{label}</Label>
       <Input
         type="number"
@@ -280,9 +335,23 @@ function NumField({
         onChange={(e) =>
           onChange(e.target.value === "" ? undefined : Number(e.target.value))
         }
+        className="w-full"
       />
     </div>
   );
+}
+
+function progressionHelp(kind: ProgressionRule["kind"]): string {
+  switch (kind) {
+    case "none":
+      return "Manual — keep the same target every session, you decide when to bump it.";
+    case "linear":
+      return "Linear — add a fixed amount of weight every session, regardless of how it felt.";
+    case "double_progression":
+      return "Double progression — add reps until you hit the rep target, then bump weight and reset reps.";
+    case "percent_1rm":
+      return "% of 1RM — target a fraction of your estimated 1-rep-max. Auto-adjusts as your PR climbs.";
+  }
 }
 
 function ProgressionPicker({
@@ -293,7 +362,7 @@ function ProgressionPicker({
   onChange: (r: ProgressionRule) => void;
 }) {
   return (
-    <div className="space-y-1">
+    <div className="min-w-0 space-y-1">
       <Label className="text-xs">Progression</Label>
       <div className="flex gap-2">
         <select
@@ -319,7 +388,7 @@ function ProgressionPicker({
                 return onChange({ kind: "percent_1rm", percent: 0.75 });
             }
           }}
-          className="border-input bg-background h-9 flex-1 rounded-md border px-2 text-sm"
+          className="border-input bg-background h-9 min-w-0 flex-1 rounded-md border px-2 text-sm"
         >
           <option value="none">None</option>
           <option value="linear">Linear</option>
@@ -335,7 +404,7 @@ function ProgressionPicker({
             onChange={(e) =>
               onChange({ ...rule, weight_increment_kg: Number(e.target.value) })
             }
-            className="w-24"
+            className="w-20 shrink-0"
           />
         )}
         {rule.kind === "double_progression" && (
@@ -343,8 +412,10 @@ function ProgressionPicker({
             type="number"
             min={1}
             value={rule.rep_target}
-            onChange={(e) => onChange({ ...rule, rep_target: Number(e.target.value) })}
-            className="w-24"
+            onChange={(e) =>
+              onChange({ ...rule, rep_target: Number(e.target.value) })
+            }
+            className="w-20 shrink-0"
           />
         )}
         {rule.kind === "percent_1rm" && (
@@ -354,11 +425,16 @@ function ProgressionPicker({
             min={0.1}
             max={1.5}
             value={rule.percent}
-            onChange={(e) => onChange({ ...rule, percent: Number(e.target.value) })}
-            className="w-24"
+            onChange={(e) =>
+              onChange({ ...rule, percent: Number(e.target.value) })
+            }
+            className="w-20 shrink-0"
           />
         )}
       </div>
+      <p className="text-muted-foreground text-[11px] leading-snug">
+        {progressionHelp(rule.kind)}
+      </p>
     </div>
   );
 }

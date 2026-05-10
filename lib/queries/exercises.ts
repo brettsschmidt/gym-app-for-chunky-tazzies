@@ -11,7 +11,7 @@ export async function listExercises(opts: {
   let query = supabase
     .from("exercises")
     .select(
-      "id, name, slug, chunky_tazzle_id, video_url, is_unilateral, primary_muscle_id, equipment_id, muscle_groups(slug,name), equipment(slug,name)",
+      "id, name, slug, chunky_tazzle_id, video_url, is_unilateral, primary_muscle_id, equipment_id, muscle_groups!exercises_primary_muscle_id_fkey(slug,name), equipment(slug,name)",
     )
     .or(`chunky_tazzle_id.is.null,chunky_tazzle_id.eq.${opts.tazzleId}`)
     .order("name", { ascending: true })
@@ -62,7 +62,7 @@ export async function getExercise(id: string) {
   const { data } = await supabase
     .from("exercises")
     .select(
-      "id, name, slug, description, instructions, video_url, is_unilateral, chunky_tazzle_id, primary_muscle_id, equipment_id, muscle_groups(name,slug), equipment(name,slug)",
+      "id, name, slug, description, instructions, video_url, is_unilateral, chunky_tazzle_id, primary_muscle_id, equipment_id, muscle_groups!exercises_primary_muscle_id_fkey(name,slug), equipment(name,slug)",
     )
     .eq("id", id)
     .single();

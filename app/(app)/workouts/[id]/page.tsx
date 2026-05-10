@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getActiveTazzleId } from "@/lib/active-tazzle";
 import { getTemplate } from "@/lib/queries/workouts";
 import { listExercises } from "@/lib/queries/exercises";
+import { getUserUnits } from "@/lib/queries/units";
 import { TemplateBuilder } from "@/components/workouts/TemplateBuilder";
 import { Button } from "@/components/ui/button";
 import { deleteTemplateAction } from "@/lib/actions/workouts";
@@ -23,11 +24,16 @@ export default async function TemplateDetailPage({
   if (!result) notFound();
   const { template, lines } = result;
 
-  const exercises = await listExercises({ tazzleId });
+  const [exercises, units] = await Promise.all([
+    listExercises({ tazzleId }),
+    getUserUnits(),
+  ]);
   const opts = exercises.map((e) => ({ id: e.id as string, name: e.name as string }));
+  const exNameById = new Map(opts.map((e) => [e.id, e.name]));
 
   const initialLines: TemplateExerciseLine[] = lines.map((l, idx) => ({
     exercise_id: l.exercise_id as string,
+    exercise_name: exNameById.get(l.exercise_id as string),
     position: (l.position as number) ?? idx,
     target_sets: (l.target_sets as number | null) ?? undefined,
     target_reps_min: (l.target_reps_min as number | null) ?? undefined,
@@ -71,6 +77,7 @@ export default async function TemplateDetailPage({
         tazzleId={tazzleId}
         templateId={id}
         exercises={opts}
+        units={units}
         initial={{
           name: template.name as string,
           notes: (template.notes as string) ?? "",

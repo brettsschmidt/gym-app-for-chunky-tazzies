@@ -40,7 +40,10 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/icons/") ||
     pathname.startsWith("/branding/") ||
     pathname.startsWith("/.well-known/") ||
-    pathname === "/sw.js";
+    pathname === "/sw.js" ||
+    pathname === "/icon.png" ||
+    pathname === "/apple-icon.png" ||
+    pathname === "/favicon.ico";
 
   if (!user && !isAuthRoute && !isPublicRoute) {
     const url = request.nextUrl.clone();
@@ -61,6 +64,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.json|icons|.well-known|api/cron|api/webhooks).*)",
+    "/((?!_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|sw.js|manifest.json|icons|.well-known|api/cron|api/webhooks).*)",
   ],
 };

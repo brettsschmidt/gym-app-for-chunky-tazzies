@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { HotDogChart } from "@/components/hot-dogs/HotDogChart";
+import { buildHotDogStats, flavorMessage } from "@/lib/hotdog-stats";
 
 export default async function HotDogsPage() {
   const tazzles = await listMyTazzles();
@@ -27,9 +28,11 @@ export default async function HotDogsPage() {
   const tazzleId = (await getActiveTazzleId()) ?? tazzles[0].id;
   const supabase = await createSupabaseServerClient();
 
-  // Pull last 90 days of logs for both daily chart and leaderboard.
-  const since = new Date();
-  since.setDate(since.getDate() - 90);
+  // Pull from start of last year so annual comparisons work too.
+  const now = new Date();
+  const thisYear = now.getUTCFullYear();
+  const lastYear = thisYear - 1;
+  const since = new Date(Date.UTC(lastYear, 0, 1));
 
   const { data: logs } = await supabase
     .from("hot_dog_logs")
@@ -52,6 +55,30 @@ export default async function HotDogsPage() {
   );
 
   const total = rows.reduce((sum, r) => sum + r.count, 0);
+
+  // Annual splits + projection for the current year.
+  let thisYearCount = 0;
+  let lastYearCount = 0;
+  for (const r of rows) {
+    const y = new Date(r.eaten_at).getUTCFullYear();
+    if (y === thisYear) thisYearCount += r.count;
+    else if (y === lastYear) lastYearCount += r.count;
+  }
+  const startOfYear = new Date(Date.UTC(thisYear, 0, 1));
+  const dayOfYear = Math.max(
+    1,
+    Math.floor((now.getTime() - startOfYear.getTime()) / 86_400_000) + 1,
+  );
+  const isLeap =
+    (thisYear % 4 === 0 && thisYear % 100 !== 0) || thisYear % 400 === 0;
+  const daysInYear = isLeap ? 366 : 365;
+  const projectedThisYear = Math.round(
+    (thisYearCount / dayOfYear) * daysInYear,
+  );
+  const yoyDelta = thisYearCount - lastYearCount;
+  const yoyPct =
+    lastYearCount > 0 ? (yoyDelta / lastYearCount) * 100 : null;
+  const aheadOfLastYear = lastYearCount > 0 && projectedThisYear > lastYearCount;
 
   // Daily totals (last 30 days) for chart.
   const dailyMap = new Map<string, number>();
@@ -79,9 +106,59 @@ export default async function HotDogsPage() {
       <header>
         <h1 className="text-2xl font-semibold">🌭 Hot dog tracker</h1>
         <p className="text-muted-foreground text-sm">
-          The tazzle&apos;s definitive hot dog scoreboard. Last 90 days.
+          The tazzle&apos;s definitive hot dog scoreboard.
         </p>
       </header>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{thisYear} vs {lastYear}</CardTitle>
+          <CardDescription>
+            {lastYearCount === 0
+              ? `nothing to beat from ${lastYear} — set the bar`
+              : aheadOfLastYear
+                ? `you're on pace for ${projectedThisYear} this year — that's a beatdown`
+                : `pace would land you at ${projectedThisYear}; you need to grill harder`}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div>
+              <p className="text-muted-foreground text-xs uppercase">{thisYear}</p>
+              <p className="text-3xl font-bold tabular-nums">{thisYearCount}</p>
+              <p className="text-muted-foreground text-xs">
+                day {dayOfYear} of {daysInYear}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-xs uppercase">YoY</p>
+              <p
+                className={`text-3xl font-bold tabular-nums ${
+                  yoyDelta > 0
+                    ? "text-success"
+                    : yoyDelta < 0
+                      ? "text-destructive"
+                      : ""
+                }`}
+              >
+                {yoyDelta > 0 ? "+" : ""}
+                {yoyDelta}
+              </p>
+              <p className="text-muted-foreground text-xs">
+                {yoyPct == null ? "n/a" : `${yoyPct > 0 ? "+" : ""}${yoyPct.toFixed(0)}%`}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-xs uppercase">{lastYear}</p>
+              <p className="text-3xl font-bold tabular-nums">{lastYearCount}</p>
+              <p className="text-muted-foreground text-xs">final</p>
+            </div>
+          </div>
+          <p className="text-muted-foreground mt-3 text-center text-xs">
+            🌭 Projected {thisYear} total: <strong>{projectedThisYear}</strong>
+          </p>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
@@ -124,6 +201,36 @@ export default async function HotDogsPage() {
         </CardHeader>
         <CardContent>
           <HotDogChart data={daily} days={30} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>The vibe check</CardTitle>
+          <CardDescription>{flavorMessage(total)}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {buildHotDogStats(total, rows.length).map((stat) => (
+              <li
+                key={stat.label}
+                className="bg-muted/40 flex items-start gap-3 rounded-lg p-3"
+              >
+                <span className="text-2xl" aria-hidden>
+                  {stat.emoji}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-muted-foreground text-xs uppercase tracking-wide">
+                    {stat.label}
+                  </p>
+                  <p className="truncate text-lg font-semibold tabular-nums">
+                    {stat.value}
+                  </p>
+                  <p className="text-muted-foreground text-xs">{stat.detail}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
         </CardContent>
       </Card>
 

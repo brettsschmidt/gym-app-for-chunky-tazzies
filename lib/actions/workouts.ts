@@ -44,7 +44,13 @@ export async function createTemplateAction(formData: FormData) {
   if (error || !tpl) redirect("/workouts/new?error=create_failed");
 
   if (parsed.data.lines.length) {
-    await insertLines(supabase, tpl.id as string, parsed.data.lines);
+    await insertLines(
+      supabase,
+      tpl.id as string,
+      parsed.data.chunky_tazzle_id,
+      user.id,
+      parsed.data.lines,
+    );
   }
 
   revalidatePath("/workouts");
@@ -70,7 +76,17 @@ export async function updateTemplateAction(formData: FormData) {
 
   await supabase.from("workout_template_exercises").delete().eq("workout_template_id", id);
   if (parsed.data.lines.length) {
-    await insertLines(supabase, id, parsed.data.lines);
+    const {
+      data: { user: u },
+    } = await supabase.auth.getUser();
+    if (!u) redirect("/login");
+    await insertLines(
+      supabase,
+      id,
+      parsed.data.chunky_tazzle_id,
+      u.id,
+      parsed.data.lines,
+    );
   }
   revalidatePath(`/workouts/${id}`);
   redirect(`/workouts/${id}`);
@@ -88,9 +104,45 @@ export async function deleteTemplateAction(formData: FormData) {
 async function insertLines(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   templateId: string,
+  tazzleId: string,
+  userId: string,
   lines: TemplateExerciseLine[],
 ) {
-  const rows = lines.map((l, idx) => ({
+  // Resolve exercise_name → exercise_id, creating tazzle-scoped exercises
+  // for any names that don't match an existing one.
+  const resolved: (TemplateExerciseLine & { exercise_id: string })[] = [];
+  for (const l of lines) {
+    let exerciseId = l.exercise_id;
+    if (!exerciseId && l.exercise_name) {
+      const name = l.exercise_name;
+      const { data: existing } = await supabase
+        .from("exercises")
+        .select("id")
+        .eq("name", name)
+        .or(`chunky_tazzle_id.is.null,chunky_tazzle_id.eq.${tazzleId}`)
+        .limit(1)
+        .maybeSingle();
+      if (existing) {
+        exerciseId = existing.id as string;
+      } else {
+        const { data: created } = await supabase
+          .from("exercises")
+          .insert({
+            name,
+            chunky_tazzle_id: tazzleId,
+            created_by: userId,
+          })
+          .select("id")
+          .single();
+        exerciseId = (created?.id as string | undefined) ?? undefined;
+      }
+    }
+    if (!exerciseId) continue;
+    resolved.push({ ...l, exercise_id: exerciseId });
+  }
+  if (!resolved.length) return;
+
+  const rows = resolved.map((l, idx) => ({
     workout_template_id: templateId,
     exercise_id: l.exercise_id,
     position: l.position ?? idx,
