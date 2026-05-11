@@ -15,7 +15,7 @@ function GoblinBubble({ message }: { message: string }) {
         alt=""
         width={48}
         height={48}
-        className="size-12 shrink-0"
+        className="size-12 shrink-0 mascot-anim-goblin"
       />
       <div className="text-sm leading-snug">{message}</div>
     </div>

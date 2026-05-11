@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CopyButton } from "@/components/ui/CopyButton";
 
 export default async function TazzleMembersPage({
   params,
@@ -114,11 +115,15 @@ export default async function TazzleMembersPage({
                   key={inv.id as string}
                   className="flex items-center justify-between gap-2 px-3 py-2 text-sm"
                 >
-                  <div>
+                  <div className="flex min-w-0 items-center gap-1">
                     <code className="bg-muted rounded px-2 py-0.5 font-mono">
                       {inv.code as string}
                     </code>
-                    <span className="text-muted-foreground ml-2 text-xs">
+                    <CopyButton
+                      text={inv.code as string}
+                      label="invite code"
+                    />
+                    <span className="text-muted-foreground ml-1 truncate text-xs">
                       {inv.used_count as number}/{inv.max_uses as number} used
                       {inv.expires_at &&
                         ` · expires ${new Date(inv.expires_at as string).toLocaleDateString()}`}

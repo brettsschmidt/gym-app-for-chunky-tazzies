@@ -10,6 +10,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { HotDogChart } from "@/components/hot-dogs/HotDogChart";
+import { YearVsYearChart } from "@/components/hot-dogs/YearVsYearChart";
+import { TylerButton } from "@/components/hot-dogs/TylerButton";
 import { buildHotDogStats, flavorMessage } from "@/lib/hotdog-stats";
 
 export default async function HotDogsPage() {
@@ -80,6 +82,24 @@ export default async function HotDogsPage() {
     lastYearCount > 0 ? (yoyDelta / lastYearCount) * 100 : null;
   const aheadOfLastYear = lastYearCount > 0 && projectedThisYear > lastYearCount;
 
+  // Per-day rollups for the year-vs-year chart (separate to avoid re-walking).
+  const yearLogsMap = { this: [] as { date: string; count: number }[], last: [] as { date: string; count: number }[] };
+  const yearMap = new Map<string, number>();
+  const yearOf = new Map<string, number>();
+  for (const r of rows) {
+    const d = new Date(r.eaten_at);
+    const y = d.getUTCFullYear();
+    if (y !== thisYear && y !== lastYear) continue;
+    const key = d.toISOString().slice(0, 10);
+    yearMap.set(key, (yearMap.get(key) ?? 0) + r.count);
+    yearOf.set(key, y);
+  }
+  for (const [date, count] of yearMap) {
+    const y = yearOf.get(date)!;
+    if (y === thisYear) yearLogsMap.this.push({ date, count });
+    else if (y === lastYear) yearLogsMap.last.push({ date, count });
+  }
+
   // Daily totals (last 30 days) for chart.
   const dailyMap = new Map<string, number>();
   for (const r of rows) {
@@ -103,11 +123,14 @@ export default async function HotDogsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-4 md:p-6">
-      <header>
-        <h1 className="text-2xl font-semibold">🌭 Hot dog tracker</h1>
-        <p className="text-muted-foreground text-sm">
-          The tazzle&apos;s definitive hot dog scoreboard.
-        </p>
+      <header className="flex items-start justify-between gap-2">
+        <div>
+          <h1 className="text-2xl font-semibold">🌭 Hot dog tracker</h1>
+          <p className="text-muted-foreground text-sm">
+            The tazzle&apos;s definitive hot dog scoreboard.
+          </p>
+        </div>
+        <TylerButton />
       </header>
 
       <Card>
@@ -157,6 +180,16 @@ export default async function HotDogsPage() {
           <p className="text-muted-foreground mt-3 text-center text-xs">
             🌭 Projected {thisYear} total: <strong>{projectedThisYear}</strong>
           </p>
+          <div className="mt-4">
+            <YearVsYearChart
+              thisYearLogs={yearLogsMap.this}
+              lastYearLogs={yearLogsMap.last}
+              thisYear={thisYear}
+              lastYear={lastYear}
+              todayDayOfYear={dayOfYear}
+              projectedTotal={projectedThisYear}
+            />
+          </div>
         </CardContent>
       </Card>
 

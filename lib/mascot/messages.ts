@@ -1,10 +1,13 @@
 // Tazzie mascot message bank. Picked at random per trigger by `pickMessage`.
 // Keep them short — they live inside a tiny floating toast.
 
+import { TYLER_LINES } from "@/lib/hot-dogs/tyler-dialog";
+
 export type MascotKind =
   | "pr"
   | "set"
   | "hotdog"
+  | "tyler"
   | "session_done"
   | "streak"
   | "rest"
@@ -36,6 +39,7 @@ export const MASCOT_MESSAGES: Record<MascotKind, readonly string[]> = {
     "fuel = consumed",
     "tomorrow's session gonna be NUCLEAR",
   ],
+  tyler: TYLER_LINES,
   session_done: [
     "earned that nap",
     "you absolute unit",
@@ -63,6 +67,8 @@ const SPRITES: Record<MascotKind, string> = {
   pr: "/branding/mascot/fire.png",
   set: "/branding/mascot/thumbs-up.png",
   hotdog: "/branding/mascot/hotdog.png",
+  // Tyler the Hot Dog — pixel-art talking hot dog mascot.
+  tyler: "/branding/mascot/tyler.png",
   session_done: "/branding/mascot/sleeping.png",
   streak: "/branding/mascot/flex.png",
   rest: "/branding/mascot/sleeping.png",

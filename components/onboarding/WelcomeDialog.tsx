@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Activity, Dumbbell, Salad, Users } from "lucide-react";
+import { MascotIdleSprite } from "@/components/mascot/MascotIdleSprite";
 import {
   Dialog,
   DialogContent,
@@ -43,13 +43,7 @@ export function WelcomeDialog() {
       <DialogContent className="max-w-md">
         <DialogHeader>
           <div className="flex items-center justify-center pb-2">
-            <Image
-              src="/branding/logo-transparent.png"
-              alt="Chunky Tazzies"
-              width={120}
-              height={120}
-              className="h-auto w-24"
-            />
+            <MascotIdleSprite size={120} className="h-auto w-24" />
           </div>
           <DialogTitle className="text-center text-2xl">
             Welcome to your tazzle 🐮

@@ -14,6 +14,7 @@ import {
 } from "@/components/search/CommandPalette";
 import { HotDogFab } from "@/components/hot-dogs/HotDogFab";
 import { MascotListener } from "@/components/mascot/MascotListener";
+import { MascotIdleSprite } from "@/components/mascot/MascotIdleSprite";
 import { GoblinNudge } from "@/components/goblin/GoblinNudge";
 import { isBrad } from "@/lib/goblin/detect";
 
@@ -80,15 +81,9 @@ export default async function DashboardLayout({
 
   return (
     <div className="bg-background flex min-h-svh flex-col">
-      <header className="bg-card safe-top sticky top-0 z-30 flex items-center justify-between gap-3 border-b px-4 py-2">
+      <header className="bg-card safe-top sticky top-0 z-30 flex items-center justify-between gap-3 border-b px-4 pb-3">
         <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-          <Image
-            src="/branding/logo-transparent.png"
-            alt="Chunky Tazzies"
-            width={32}
-            height={32}
-            className="size-8"
-          />
+          <MascotIdleSprite size={32} className="size-8" />
           <span className="hidden sm:inline">Chunky Tazzies</span>
         </Link>
         <div className="flex items-center gap-2">

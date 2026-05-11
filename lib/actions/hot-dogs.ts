@@ -42,7 +42,9 @@ export async function logHotDogAction(formData: FormData) {
     return { ok: false as const, error: "insert_failed" };
   }
 
-  await flashMascot("hotdog");
+  // Roughly one in three logs gets a Tyler line instead of the standard
+  // "noble sacrifice" mascot — keeps the hot dog cinematic universe alive.
+  await flashMascot(Math.random() < 0.33 ? "tyler" : "hotdog");
   revalidatePath("/hotdogs");
   revalidatePath("/dashboard");
   return { ok: true as const, count: parsed.data.count };
