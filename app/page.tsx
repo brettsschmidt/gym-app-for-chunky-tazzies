@@ -4,6 +4,9 @@ import { Dumbbell, Salad, Users } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { MascotIdleSprite } from "@/components/mascot/MascotIdleSprite";
+import { TylerIdleSprite } from "@/components/mascot/TylerIdleSprite";
+import { TylerButton } from "@/components/hot-dogs/TylerButton";
+import { pickTylerLine } from "@/lib/hot-dogs/tyler-dialog";
 
 export default async function LandingPage() {
   const supabase = await createSupabaseServerClient();
@@ -15,38 +18,66 @@ export default async function LandingPage() {
     redirect("/dashboard");
   }
 
+  const tylerLine = pickTylerLine();
+
   return (
     <main className="safe-top safe-bottom mx-auto flex min-h-svh max-w-3xl flex-col items-center justify-center gap-10 px-6 pt-16 pb-24 text-center">
-      <MascotIdleSprite size={256} className="mascot-alive h-auto w-48 sm:w-64" />
+      <div className="flex items-end gap-4">
+        <TylerIdleSprite
+          size={256}
+          className="mascot-alive h-auto w-40 sm:w-56"
+        />
+        <MascotIdleSprite
+          size={128}
+          className="mascot-alive hidden h-auto w-20 sm:block sm:w-28"
+        />
+      </div>
+
       <div className="space-y-4">
         <div className="bg-primary/10 text-primary inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium">
           <Dumbbell className="size-4" />
           For chunky tazzies
         </div>
         <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
-          Lift heavy. Eat smart. Track everything.
+          Lift heavy. Eat smart. Eat hot dogs.
         </h1>
         <p className="text-muted-foreground mx-auto max-w-xl text-lg">
-          Build workout plans, log every set, dial in your macros, and share
-          progress with your gym buddies — your <em>chunky tazzle</em>.
+          Build workout plans, log every set, dial in your macros, and keep score
+          with your gym buddies — your <em>chunky tazzle</em>.
         </p>
+
+        <figure className="bg-muted/40 mx-auto mt-6 max-w-xl rounded-xl border p-4 text-left">
+          <blockquote className="text-balance text-base italic leading-snug sm:text-lg">
+            “{tylerLine}”
+          </blockquote>
+          <figcaption className="text-muted-foreground mt-2 flex items-center justify-between text-xs">
+            <span>— Tyler the Hot Dog, today&apos;s sermon</span>
+            <TylerButton />
+          </figcaption>
+        </figure>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <Button asChild size="lg">
-          <Link href="/signup">Get started</Link>
+          <Link href="/signup">Get started — it&apos;s free</Link>
         </Button>
         <Button asChild size="lg" variant="outline">
           <Link href="/login">Sign in</Link>
         </Button>
+        <Button asChild size="lg" variant="ghost">
+          <Link href="/tyler">🌭 Just show me Tyler</Link>
+        </Button>
       </div>
 
-      <ul className="grid gap-6 pt-8 sm:grid-cols-3">
+      <ul className="grid gap-6 pt-8 sm:grid-cols-2 lg:grid-cols-4">
         <Feature icon={<Dumbbell className="size-5" />} title="Train">
           Templates, programs, sessions, PRs.
         </Feature>
         <Feature icon={<Salad className="size-5" />} title="Eat">
           Foods, recipes, daily macros, barcode scan.
+        </Feature>
+        <Feature icon={<span className="text-lg leading-none">🌭</span>} title="Hot dogs">
+          Tazzle leaderboard. Year-vs-year pace. Tyler approved.
         </Feature>
         <Feature icon={<Users className="size-5" />} title="Together">
           Invite your tazzle. Cheer each other on.

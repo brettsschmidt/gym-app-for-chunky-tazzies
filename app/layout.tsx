@@ -13,18 +13,42 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3001";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "Chunky Tazzies — Gym & Nutrition",
+    default: "Chunky Tazzies — Lift heavy. Eat smart. Eat hot dogs.",
     template: "%s · Chunky Tazzies",
   },
   description:
-    "A workout & nutrition tracker for chunky tazzies. Log sessions, plan workouts, track macros, share progress with your tazzle.",
+    "A workout, nutrition, and hot-dog tracker for chunky tazzies. Log sessions, hit your macros, and let Tyler the Hot Dog talk you into one more.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "Chunky Tazzies",
+  },
+  openGraph: {
+    type: "website",
+    title: "Chunky Tazzies — Lift heavy. Eat smart. Eat hot dogs.",
+    description:
+      "Workouts, macros, and a pixel-art hot dog mascot who quotes Tyler Durden at you. Built for your tazzle.",
+    images: [
+      {
+        url: "/branding/mascot/tyler.png",
+        width: 92,
+        height: 92,
+        alt: "Tyler the Hot Dog",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: "Chunky Tazzies",
+    description:
+      "Workouts, macros, and Tyler the Hot Dog. The first rule of Hot Dog Club: you talk about Hot Dog Club.",
+    images: ["/branding/mascot/tyler.png"],
   },
 };
 
