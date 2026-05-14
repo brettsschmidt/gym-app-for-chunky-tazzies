@@ -67,6 +67,9 @@ export default async function LandingPage() {
         <Button asChild size="lg" variant="ghost">
           <Link href="/tyler">🌭 Just show me Tyler</Link>
         </Button>
+        <Button asChild size="lg" variant="ghost">
+          <Link href="/brad">🪙 Brad?</Link>
+        </Button>
       </div>
 
       <ul className="grid gap-6 pt-8 sm:grid-cols-2 lg:grid-cols-4">
